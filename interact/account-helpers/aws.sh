@@ -64,6 +64,7 @@ echo $(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 if curl -s http://169.254.169.254/latest/meta-data/instance-id &>/dev/null; then
 echo "AWS OK \n\n"
 else
+echo "AWS NOK \n\n"
 echo -e -n "${Green}Please enter your AWS Access Key ID (required): \n>> ${Color_Off}"
 read ACCESS_KEY
 while [[ "$ACCESS_KEY" == "" ]]; do
