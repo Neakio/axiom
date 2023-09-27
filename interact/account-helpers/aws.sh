@@ -60,6 +60,10 @@ fi
 
 function awssetup(){
 
+
+if curl http://169.254.169.254/latest/meta-data/instance-id &>/dev/null; then
+:
+else
 echo -e -n "${Green}Please enter your AWS Access Key ID (required): \n>> ${Color_Off}"
 read ACCESS_KEY
 while [[ "$ACCESS_KEY" == "" ]]; do
@@ -78,6 +82,10 @@ done
 
 aws configure set aws_access_key_id "$ACCESS_KEY"
 aws configure set aws_secret_access_key "$SECRET_KEY"
+fi
+
+
+
 
 default_region="us-west-2"
 echo -e -n "${Green}Please enter your default region: (Default '$default_region', press enter) \n>> ${Color_Off}"
@@ -91,7 +99,13 @@ read region
 	if [[ "$size" == "" ]]; then
 	echo -e "${Blue}Selected default option 't2.medium'${Color_Off}"
         size="t2.medium"
-fi
+  fi
+  echo -e -n "Please enter the id of the vpc you want to use: (Default vpc, press enter) \n"
+  read vpc
+  if [[ "$vpc" != "" ]]; then
+  aws configure set default.vpc "$vpc"
+  fi
+
 
 aws configure set default.region "$region"
 
