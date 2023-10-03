@@ -134,6 +134,11 @@ function awssetup() {
     echo -e "${BRed}Your entry didn't contain a valid input. Please respond by 'yes' or 'no'. \n>> ${Color_Off}"
     read public_ip
   done
+  if [[ "$public_ip" == "yes" ]]; then
+  $public_ip=true
+  else
+  $public_ip=false
+  fi
 
   aws configure set default.region "$region"
 
