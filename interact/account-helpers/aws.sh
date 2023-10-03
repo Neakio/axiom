@@ -15,25 +15,24 @@ email=""
 BASEOS="$(uname)"
 case $BASEOS in
 'Linux')
-    BASEOS='Linux'
-    ;;
+  BASEOS='Linux'
+  ;;
 'FreeBSD')
-    BASEOS='FreeBSD'
-    alias ls='ls -G'
-    ;;
+  BASEOS='FreeBSD'
+  alias ls='ls -G'
+  ;;
 'WindowsNT')
-    BASEOS='Windows'
-    ;;
+  BASEOS='Windows'
+  ;;
 'Darwin')
-    BASEOS='Mac'
-    ;;
+  BASEOS='Mac'
+  ;;
 'SunOS')
-    BASEOS='Solaris'
-    ;;
+  BASEOS='Solaris'
+  ;;
 'AIX') ;;
 *) ;;
 esac
-
 
 install_aws_cli() {
   echo -e "${Blue}Installing aws cli...${Color_Off}"
@@ -49,7 +48,7 @@ install_aws_cli() {
 }
 
 is_installed() {
-  command -v "$1" > /dev/null 2>&1
+  command -v "$1" >/dev/null 2>&1
 }
 
 if is_installed "aws"; then
@@ -58,93 +57,121 @@ else
   install_aws_cli
 fi
 
-function awssetup(){
+function awssetup() {
 
-echo $(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-if curl -s http://169.254.169.254/latest/meta-data/instance-id &>/dev/null; then
-echo "AWS OK \n\n"
-else
-echo "AWS NOK \n\n"
-echo -e -n "${Green}Please enter your AWS Access Key ID (required): \n>> ${Color_Off}"
-read ACCESS_KEY
-while [[ "$ACCESS_KEY" == "" ]]; do
-	echo -e "${BRed}Please provide a AWS Access KEY ID, your entry contained no input.${Color_Off}"
-	echo -e -n "${Green}Please enter your token (required): \n>> ${Color_Off}"
-	read ACCESS_KEY
-done
+  if curl -s http://169.254.169.254/latest/meta-data/instance-id &>/dev/null; then
+    :
+  else
+    echo -e -n "${Green}Please enter your AWS Access Key ID (required): \n>> ${Color_Off}"
+    read ACCESS_KEY
+    while [[ "$ACCESS_KEY" == "" ]]; do
+      echo -e "${BRed}Please provide a AWS Access KEY ID, your entry contained no input.${Color_Off}"
+      echo -e -n "${Green}Please enter your token (required): \n>> ${Color_Off}"
+      read ACCESS_KEY
+    done
 
-echo -e -n "${Green}Please enter your AWS Secret Access Key (required): \n>> ${Color_Off}"
-read SECRET_KEY
-while [[ "$SECRET_KEY" == "" ]]; do
-	echo -e "${BRed}Please provide a AWS Secret Access Key, your entry contained no input.${Color_Off}"
-	echo -e -n "${Green}Please enter your token (required): \n>> ${Color_Off}"
-	read SECRET_KEY
-done
+    echo -e -n "${Green}Please enter your AWS Secret Access Key (required): \n>> ${Color_Off}"
+    read SECRET_KEY
+    while [[ "$SECRET_KEY" == "" ]]; do
+      echo -e "${BRed}Please provide a AWS Secret Access Key, your entry contained no input.${Color_Off}"
+      echo -e -n "${Green}Please enter your token (required): \n>> ${Color_Off}"
+      read SECRET_KEY
+    done
 
-aws configure set aws_access_key_id "$ACCESS_KEY"
-aws configure set aws_secret_access_key "$SECRET_KEY"
-fi
-
-
-
-
-default_region="us-west-2"
-echo -e -n "${Green}Please enter your default region: (Default '$default_region', press enter) \n>> ${Color_Off}"
-read region
-	if [[ "$region" == "" ]]; then
-	echo -e "${Blue}Selected default option '$default_region'${Color_Off}"
-	region="$default_region"
-	fi
-	echo -e -n "${Green}Please enter your default size: (Default 't2.medium', press enter) \n>> ${Color_Off}"
-	read size
-	if [[ "$size" == "" ]]; then
-	echo -e "${Blue}Selected default option 't2.medium'${Color_Off}"
-        size="t2.medium"
-  fi
-  echo -e -n "Please enter the id of the vpc you want to use: (Default vpc, press enter) \n"
-  read vpc
-  if [[ "$vpc" != "" ]]; then
-  aws configure set default.vpc "$vpc"
+    aws configure set aws_access_key_id "$ACCESS_KEY"
+    aws configure set aws_secret_access_key "$SECRET_KEY"
   fi
 
+  default_region="us-west-2"
+  echo -e -n "${Green}Please enter your default region: (Default '$default_region', press enter) \n>> ${Color_Off}"
+  read region
+  if [[ "$region" == "" ]]; then
+    echo -e "${Blue}Selected default option '$default_region'${Color_Off}"
+    region="$default_region"
+  fi
+  echo -e -n "${Green}Please enter your default size: (Default 't2.medium', press enter) \n>> ${Color_Off}"
+  read size
+  if [[ "$size" == "" ]]; then
+    echo -e "${Blue}Selected default option 't2.medium'${Color_Off}"
+    size="t2.medium"
+  fi
+  while true; do
+    echo -e -n "${Green}Here are the differents VPCs available : \n${Color_Off}"
+    aws ec2 describe-vpcs --query "Vpcs[*].[Tags[?Key=='Name'].Value]" --output text | awk -F'\t' '{if (NR==1) print "Number \t Subnet"} {print NR-1 "\t" $1}'
+    echo -e -n "${Green}Please choose the vpc you want to us: (Default vpc, press enter) \n>> ${Color_Off}"
+    read vpc
+    vpc_id=$(aws ec2 describe-vpcs --filters --query "Vpcs[$vpc].VpcId" --output text)
+    if [[ "$vpc" == "" ]]; then
+      vpc_id=$(aws ec2 describe-vpcs --filters "Name=tag:Name, Values=default-vpc" --query "Vpcs[0].VpcId" --output text)
+      subnet_id=$(aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[$subnet].SubnetId" --output text)
+      if [[ "$vpc_id" == "None" ]]; then
+        echo "${BRed}No default vpc available, please choose a vpc.${Color_Off}"
+      else
+        break
+      fi
+    elif [["$vpc_id" != "None" ]]; then
+      while true; do
+        echo -e -n "${Green}This vpc has those subnets : \n${Color_Off}"
+        aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[*].[Tags[?Key=='Name'].Value]" --output text | awk -F'\t' '{if (NR==1) print "Number \t Subnet"} {print NR-1 "\t" $1}'
+        echo -e -n "${Green}Please choose the subnet you want to use: (number required) \n>> ${Color_Off}"
+        read subnet
+        subnet_id=$(aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[$subnet].SubnetId" --output text)
+        if [[ "$subnet_id" != "None" && $subnet =~ ^[0-9]+$ ]]; then
+          break
+        else
+          echo -e "${BRed}Please provide a subnet, your entry didn't contain a valid input.${Color_Off}"
+        fi
+      done
+      break
+    else
+      echo -e "${BRed}Your entry didn't contain a valid input.${Color_Off}"
+    fi
+  done
 
-aws configure set default.region "$region"
+  echo -e "${Green}Do you want your instances having public IP addresses ? (required) \n>>${Color_Off}"
+    read public_ip
+    while [[ "$public_ip" != "yes" || "$publicIP" != "no" ]]; do
+        echo -e "${BRed}Your entry didn't contain a valid input. Please respond by 'yes' or 'no'. \n>>${Color_Off}"
+        read public_ip
+    done
 
-echo -e "${BGreen}Creating an Axiom Security Group: ${Color_Off}"
-aws ec2 delete-security-group --group-name axiom > /dev/null 2>&1
-sc="$(aws ec2 create-security-group --group-name axiom --description "Axiom SG")"
-group_id="$(echo "$sc" | jq -r '.GroupId')"
-echo -e "${BGreen}Created Security Group: $group_id ${Color_Off}"
+  aws configure set default.region "$region"
 
-######################################################################################################## we should add this to whitelist your IP - TODO
-group_rules="$(aws ec2 authorize-security-group-ingress --group-id "$group_id" --protocol tcp --port 2266 --cidr 0.0.0.0/0)"
-group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')"
-sec_group_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].SecurityGroupRuleId')"
+  echo -e "${BGreen}Creating an Axiom Security Group: ${Color_Off}"
+  aws ec2 delete-security-group --group-name axiom > /dev/null 2>&1
+  sc="$(aws ec2 create-security-group --group-name axiom --vpc-id $vpc_id --description "Axiom SG")"
+  group_id="$(echo "$sc" | jq -r '.GroupId')"
+  echo -e "${BGreen}Created Security Group: $group_id ${Color_Off}"
 
-data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$sec_group_id\",\"region\":\"$region\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
+  ######################################################################################################## we should add this to whitelist your IP - TODO
+  group_rules="$(aws ec2 authorize-security-group-ingress --group-id "$group_id" --protocol tcp --port 2266 --cidr 0.0.0.0/0)"
+  group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')"
+  sec_group_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].SecurityGroupRuleId')"
 
-echo -e "${BGreen}Profile settings below: ${Color_Off}"
-echo $data | jq
-echo -e "${BWhite}Press enter if you want to save these to a new profile, type 'r' if you wish to start again.${Color_Off}"
-read ans
+  data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$sec_group_id\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",,\"public_ip\":\"$public_ip\"\"provider\":\"aws\",\"default_size\":\"$size\"}")"
 
-if [[ "$ans" == "r" ]];
-then
+  echo -e "${BGreen}Profile settings below: ${Color_Off}"
+  echo $data | jq
+  echo -e "${BWhite}Press enter if you want to save these to a new profile, type 'r' if you wish to start again.${Color_Off}"
+  read ans
+
+  if [[ "$ans" == "r" ]];
+  then
     $0
     exit
-fi
+  fi
 
-echo -e -n "${BWhite}Please enter your profile name (e.g 'personal', must be all lowercase/no specials)\n>> ${Color_Off}"
-read title
+  echo -e -n "${BWhite}Please enter your profile name (e.g 'personal', must be all lowercase/no specials)\n>> ${Color_Off}"
+  read title
 
-if [[ "$title" == "" ]]; then
+  if [[ "$title" == "" ]]; then
     title="personal"
     echo -e "${Blue}Named profile 'personal'${Color_Off}"
-fi
+  fi
 
-echo $data | jq > "$AXIOM_PATH/accounts/$title.json"
-echo -e "${BGreen}Saved profile '$title' successfully!${Color_Off}"
-$AXIOM_PATH/interact/axiom-account $title
+  echo $data | jq > "$AXIOM_PATH/accounts/$title.json"
+  echo -e "${BGreen}Saved profile '$title' successfully!${Color_Off}"
+  $AXIOM_PATH/interact/axiom-account $title
 
 }
 
