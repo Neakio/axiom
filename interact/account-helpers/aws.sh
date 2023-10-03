@@ -128,16 +128,16 @@ function awssetup() {
     fi
   done
 
-  echo -e "${Green}Do you want your instances having public IP addresses ? (required) \n>> ${Color_Off}"
+  echo -e -n "${Green}Do you want your instances having public IP addresses ? (required) \n>> ${Color_Off}"
   read public_ip
   while [[ "$public_ip" != "yes" && "$publicIP" != "no" ]]; do
-    echo -e "${BRed}Your entry didn't contain a valid input. Please respond by 'yes' or 'no'. \n>> ${Color_Off}"
+    echo -e -n "${BRed}Your entry didn't contain a valid input. Please respond by 'yes' or 'no'. \n>> ${Color_Off}"
     read public_ip
   done
   if [[ "$public_ip" == "yes" ]]; then
-  $public_ip=true
+  public_ip=true
   else
-  $public_ip=false
+  public_ip=false
   fi
 
   aws configure set default.region "$region"
