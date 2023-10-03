@@ -109,7 +109,7 @@ function awssetup() {
       else
         break
       fi
-    elif [["$vpc_id" != "None" ]]; then
+    elif [[ "$vpc_id" != "None" ]]; then
       while true; do
         echo -e -n "${Green}This vpc has those subnets : \n${Color_Off}"
         aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[*].[Tags[?Key=='Name'].Value]" --output text | awk -F'\t' '{if (NR==1) print "Number \t Subnet"} {print NR-1 "\t" $1}'
@@ -129,16 +129,16 @@ function awssetup() {
   done
 
   echo -e "${Green}Do you want your instances having public IP addresses ? (required) \n>>${Color_Off}"
+  read public_ip
+  while [[ "$public_ip" != "yes" || "$publicIP" != "no" ]]; do
+    echo -e "${BRed}Your entry didn't contain a valid input. Please respond by 'yes' or 'no'. \n>>${Color_Off}"
     read public_ip
-    while [[ "$public_ip" != "yes" || "$publicIP" != "no" ]]; do
-        echo -e "${BRed}Your entry didn't contain a valid input. Please respond by 'yes' or 'no'. \n>>${Color_Off}"
-        read public_ip
-    done
+  done
 
   aws configure set default.region "$region"
 
   echo -e "${BGreen}Creating an Axiom Security Group: ${Color_Off}"
-  aws ec2 delete-security-group --group-name axiom > /dev/null 2>&1
+  aws ec2 delete-security-group --group-name axiom >/dev/null 2>&1
   sc="$(aws ec2 create-security-group --group-name axiom --vpc-id $vpc_id --description "Axiom SG")"
   group_id="$(echo "$sc" | jq -r '.GroupId')"
   echo -e "${BGreen}Created Security Group: $group_id ${Color_Off}"
@@ -155,8 +155,7 @@ function awssetup() {
   echo -e "${BWhite}Press enter if you want to save these to a new profile, type 'r' if you wish to start again.${Color_Off}"
   read ans
 
-  if [[ "$ans" == "r" ]];
-  then
+  if [[ "$ans" == "r" ]]; then
     $0
     exit
   fi
@@ -169,7 +168,7 @@ function awssetup() {
     echo -e "${Blue}Named profile 'personal'${Color_Off}"
   fi
 
-  echo $data | jq > "$AXIOM_PATH/accounts/$title.json"
+  echo $data | jq >"$AXIOM_PATH/accounts/$title.json"
   echo -e "${BGreen}Saved profile '$title' successfully!${Color_Off}"
   $AXIOM_PATH/interact/axiom-account $title
 
