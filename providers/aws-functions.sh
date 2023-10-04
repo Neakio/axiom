@@ -314,9 +314,9 @@ create_instance() {
 	#  --no-header 2>/dev/null) ||
 	#keyid=$(doctl compute ssh-key list | grep "$sshkey_fingerprint" | awk '{ print $1 }')
 	if [[ $public_ip = true ]]; then
-		aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address true --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
+		aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
 	else
-		aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --no-associate-public-ip-address true --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
+		aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --no-associate-public-ip-address --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
 	fi
 	sleep 260
 }
