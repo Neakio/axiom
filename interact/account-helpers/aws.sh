@@ -127,11 +127,10 @@ function awssetup() {
         else
           echo -e "${BRed}Please provide a subnet, your entry didn't contain a valid input.${Color_Off}"
         fi
-        else
-        echo -e "${BRed}Your entry didn't contain a valid input.${Color_Off}"
-      done
+              done
       break
-
+else
+      echo -e "${BRed}Your entry didn't contain a valid input.${Color_Off}"
     fi
   done
 
