@@ -107,7 +107,7 @@ function awssetup() {
     if [[ "$vpc" == "" ]]; then
       #Choose default vpc
       vpc_id=$(aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --query "Vpcs[0].VpcId" --output text)
-      subnet_id=$(aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[$subnet].SubnetId" --output text)
+      is_default=
       if [[ "$vpc_id" == "None" ]]; then
         echo "${BRed}No default vpc available, please choose a vpc.${Color_Off}"
       else
@@ -115,21 +115,23 @@ function awssetup() {
       fi
     elif [[ "$vpc_id" != "None" ]]; then
       while true; do
+      if [[]]
+        #Case if specific VPC selected
         echo -e -n "${Green}This vpc has those subnets : \n${Color_Off}"
         aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[*].[Tags[?Key=='Name'].Value]" --output text | awk -F'\t' '{if (NR==1) print "Number \t Subnet"} {print NR-1 "\t" $1}'
         echo -e -n "${Green}Please choose the subnet you want to use: (number required) \n>> ${Color_Off}"
         read subnet
-
+        subnet_id=$(aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[$subnet].SubnetId" --output text)
+        if [[ "$subnet_id" != "None" && $subnet =~ ^[0-9]+$ ]]; then
+          break
+        else
+          echo -e "${BRed}Please provide a subnet, your entry didn't contain a valid input.${Color_Off}"
+        fi
+        else
+        echo -e "${BRed}Your entry didn't contain a valid input.${Color_Off}"
       done
       break
-      subnet_id=$(aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[$subnet].SubnetId" --output text)
-      if [[ "$subnet_id" != "None" && $subnet =~ ^[0-9]+$ ]]; then
-        break
-      else
-        echo -e "${BRed}Please provide a subnet, your entry didn't contain a valid input.${Color_Off}"
-      fi
-    else
-      echo -e "${BRed}Your entry didn't contain a valid input.${Color_Off}"
+
     fi
   done
 
