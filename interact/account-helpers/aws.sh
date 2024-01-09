@@ -60,7 +60,7 @@ fi
 function awssetup() {
   #Look where is the instance
   if curl -s http://169.254.169.254/latest/meta-data/instance-id &>/dev/null; then
-    #Means that the instance is on AWS
+    #Means that the instance is on AWS and skip the Access Key
     :
   else
     #Doesn't run on AWS and need access
@@ -97,6 +97,7 @@ function awssetup() {
     echo -e "${Blue}Selected default option 't2.medium'${Color_Off}"
     size="t2.medium"
   fi
+  #Choosing the vpc
   while true; do
     echo -e -n "${Green}Here are the differents VPCs available : \n${Color_Off}"
     #Get all the VPC on the account and display them
@@ -104,7 +105,7 @@ function awssetup() {
     echo -e -n "${Green}Please choose the vpc you want to us: (Default vpc, press enter) \n>> ${Color_Off}"
     read vpc
     vpc_id=$(aws ec2 describe-vpcs --filters --query "Vpcs[$vpc].VpcId" --output text)
-    #If default VPC choosed
+    #If default VPC choosed, retrieve it
     if [[ "$vpc" == "" ]]; then
       vpc_id=$(aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --query "Vpcs[0].VpcId" --output text)
       if [[ "$vpc_id" == "None" ]]; then
@@ -115,6 +116,7 @@ function awssetup() {
       fi
     fi
   done
+  #Choosing the subnet
   while true; do
     echo -e -n "${Green}This vpc has those subnets : \n${Color_Off}"
     if [[ "$is_default" ]]; then
