@@ -302,7 +302,7 @@ create_instance() {
 	image_id="$2"
 	size_slug="$3"
 	region="$4"
-	boot_script="$5"
+	spot="$5"
 	sshkey="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.sshkey')"
 	subnet_id="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.subnet_id')"
 	security_group_id="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.security_group_id')"
@@ -314,7 +314,10 @@ create_instance() {
 	#  --no-header 2>/dev/null) ||
 	#keyid=$(doctl compute ssh-key list | grep "$sshkey_fingerprint" | awk '{ print $1 }')
 	if [[ $public_ip = true ]]; then
-		aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
+		if[[ $spot = true]]; then
+			aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address --security-group-id "$security_group_id" --instance-market-options "$spot" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
+		else
+			aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
 	else
 		aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --no-associate-public-ip-address --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
 	fi

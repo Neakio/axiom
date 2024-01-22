@@ -133,6 +133,8 @@ function usage() {
         echo -e "    Manually specify the domain to use (default is specified by cloud provider)"
         echo -e "  --restore <backup>"
         echo -e "    Initialize with a previous backup"
+        echo -e "  --spot-instance (optional)"
+        echo -e "    Use spot instances"
         echo -e "  --help"
         echo -e "    Display this help menu"
 }
@@ -215,6 +217,13 @@ do
             pass+=($i)
             pass+=($n)
         fi
+        if [[ "$arg" == "--spot-instance" ]]; then
+            n=$((i+1))
+            spot_instance=$(echo ${!n})
+            set=true
+            pass+=($i)
+            pass+=($n)
+        fi
         if [[ "$arg" == "--help" ]] || [[ "$arg" == "-h" ]] || [[ "$arg" == "help" ]]; then
             usage
             exit
@@ -244,6 +253,16 @@ if [ -z "$1" ] || [[ $1 =~ "--shell" ]] || [[ $1 =~ "--quiet" ]] || [[ $1 =~ "--
 else
     name="$1"
 fi
+
+###########################################################################################################
+# Set instance market options
+if [ "$spot_instance" != "false" ]
+then
+    spot='{"MarketType":"spot"}'
+else
+    spot=false
+fi
+
 
 ###########################################################################################################
 # Get image_id from $image ( default is from axiom.json ) or from user supplied manual image id param 
@@ -279,7 +298,7 @@ trap 'other_commands' SIGINT
 #
 if [ $quiet == "true" ]
 then
-    create_instance "$name" "$image_id" "$size" "$region" &
+    create_instance "$name" "$image_id" "$size" "$region" "$spot" &
     PID="$!"
     waitabit "$PID"
     sleep 20

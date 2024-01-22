@@ -89,6 +89,7 @@ function usage() {
         echo -e "  -i/--instances <integer>"
         echo -e "    The number of instances to spin up"
         echo -e "  -r/--regions <regions> (optional)"
+        echo -e "  -s/--spot-instance (optional)"
         echo -e "    Supply comma-separated regions to cycle through (default is region in ~/.axiom/axiom.json)"
         echo -e "  --debug (optional)"            
         echo -e "    Run with set -xv, warning: very verbose"
@@ -133,6 +134,13 @@ do
         if [[ "$arg" == "--image" ]] ; then
             n=$((i+1))
             image=$(echo ${!n})
+            set=true
+            pass+=($i)
+            pass+=($n)
+        fi
+        if [[ "$arg" == "--spot-instances" ]] || [[ "$arg" == "-s" ]]; then
+            n=$((i+1))
+            type=$(echo ${!n})
             set=true
             pass+=($i)
             pass+=($n)
