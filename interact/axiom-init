@@ -256,8 +256,7 @@ fi
 
 ###########################################################################################################
 # Set instance market options
-if [ "$spot_instance" != "false" ]
-then
+if [ "$spot_instance" != "false" ];then
     spot='{"MarketType":"spot"}'
 else
     spot=false
@@ -267,8 +266,7 @@ fi
 ###########################################################################################################
 # Get image_id from $image ( default is from axiom.json ) or from user supplied manual image id param 
 #
-if [ "$manual_image_id" != "false" ]
-then
+if [ "$manual_image_id" != "false" ];then
     image_id="$manual_image_id"
 else
     image_id="$(get_image_id "$image")"
@@ -296,7 +294,7 @@ trap 'other_commands' SIGINT
 ###########################################################################################################
 # quiet flag
 #
-if [ $quiet == "true" ]
+if [ $quiet == "true" ];
 then
     create_instance "$name" "$image_id" "$size" "$region" "$spot" &
     PID="$!"
