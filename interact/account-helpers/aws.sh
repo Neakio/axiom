@@ -104,7 +104,7 @@ function awssetup() {
     aws ec2 describe-vpcs --query "Vpcs[*].[Tags[?Key=='Name'].Value]" --output text | awk -F'\t' '{if (NR==1) print "Number \t Subnet"} {print NR-1 "\t" $1}'
     echo -e -n "${Green}Please enter the vpc number or id you want to use: (Default vpc, press enter) \n>> ${Color_Off}"
     read vpc
-    if [[ $vpc == *"vpc"*]];then
+    if [[ $vpc == *"vpc"* ]];then
       vpc_id=$vpc
     else
       vpc_id=$(aws ec2 describe-vpcs --filters --query "Vpcs[$vpc].VpcId" --output text)
