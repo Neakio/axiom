@@ -114,6 +114,7 @@ function awssetup() {
         is_default=true
         break
       fi
+      break
     fi
   done
   #Choosing the subnet
