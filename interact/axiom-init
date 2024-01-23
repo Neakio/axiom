@@ -317,7 +317,7 @@ echo -e "${BWhite}INITIALIZING IN 5 SECONDS, CTRL+C to quit... ${Color_Off}"
 sleep 5
 region_transfer
 mkdir -p "$AXIOM_PATH/tmp/"
-create_instance "$name" "$image_id" "$size" "$region" &
+create_instance "$name" "$image_id" "$size" "$region" "$spot" &
 PID="$!"
 "$NOTIFY_CMD" "Axiom Info" "Initializing '$name'..."
 

@@ -219,7 +219,11 @@ do
  name="$gen_name$i"
  echo -n -e "$name "
  args=""
-"$AXIOM_PATH"/interact/axiom-init "$name" --quiet --size "$slug" --image-id "$image_id" --no-select --region  "$region" &
+ if [[ $spot = true ]]; then
+    "$AXIOM_PATH"/interact/axiom-init "$name" --quiet --size "$slug" --image-id "$image_id" --no-select --region  "$region" -s &
+ else
+    "$AXIOM_PATH"/interact/axiom-init "$name" --quiet --size "$slug" --image-id "$image_id" --no-select --region  "$region" &
+ fi
 sleep $init_sleep
 o=$((o+1))
 done
