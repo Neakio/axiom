@@ -219,7 +219,7 @@ do
         fi
         if [[ "$arg" == "--spot-instance" ]]; then
             n=$((i+1))
-            spot_instance=$(echo ${!n})
+            spot_instance=true
             set=true
             pass+=($i)
             pass+=($n)
@@ -256,10 +256,10 @@ fi
 
 ###########################################################################################################
 # Set instance market options
-if [ "$spot_instance" != "false" ];then
+if [ "$spot_instance" = true ];then
     spot='{"MarketType":"spot"}'
 else
-    spot=false
+    spot=""
 fi
 
 

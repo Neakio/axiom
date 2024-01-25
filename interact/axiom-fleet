@@ -138,9 +138,9 @@ do
             pass+=($i)
             pass+=($n)
         fi
-        if [[ "$arg" == "--spot-instances" ]] || [[ "$arg" == "-s" ]]; then
+        if [[ "$arg" == "--spot-instance" ]]; then
             n=$((i+1))
-            type=$(echo ${!n})
+            spot_instance=true
             set=true
             pass+=($i)
             pass+=($n)
@@ -170,6 +170,14 @@ fi
 #
 if [[ "$amount" == "false" ]]; then
  amount=3
+fi
+
+###########################################################################################################
+# Set instance market options
+if [ "$spot_instance" = true ];then
+    spot='{"MarketType":"spot"}'
+else
+    spot=""
 fi
 
 ###########################################################################################################
@@ -219,7 +227,7 @@ do
  name="$gen_name$i"
  echo -n -e "$name "
  args=""
- if [[ $spot = true ]]; then
+ if [[ $spot_instance = true ]]; then
     "$AXIOM_PATH"/interact/axiom-init "$name" --quiet --size "$slug" --image-id "$image_id" --no-select --region  "$region" -s &
  else
     "$AXIOM_PATH"/interact/axiom-init "$name" --quiet --size "$slug" --image-id "$image_id" --no-select --region  "$region" &

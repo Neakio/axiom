@@ -314,7 +314,7 @@ create_instance() {
 	#  --no-header 2>/dev/null) ||
 	#keyid=$(doctl compute ssh-key list | grep "$sshkey_fingerprint" | awk '{ print $1 }')
 	if [[ $public_ip = true ]]; then
-		if [[ $spot = true ]]; then
+		if [[ $spot == '{"MarketType":"spot"}' ]]; then
 			aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address --security-group-id "$security_group_id" --instance-market-options "$spot" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
 		else
 			aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
