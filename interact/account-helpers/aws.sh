@@ -125,13 +125,13 @@ function awssetup() {
   while true; do
     echo -e -n "${Green}This vpc has those subnets : \n${Color_Off}"
     if [[ "$is_default" ]]; then
-      aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[*].[AvailabilityZone]" --output text | awk -F'\t' '{if (NR==1) print "Number \t Availability Zone"} {print NR-1 "\t" $1}'
+      aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --region $region --query "Subnets[*].[AvailabilityZone]" --output text | awk -F'\t' '{if (NR==1) print "Number \t Availability Zone"} {print NR-1 "\t" $1}'
     else
-      aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[*].[Tags[?Key=='Name'].Value]" --output text | awk -F'\t' '{if (NR==1) print "Number \t Subnet"} {print NR-1 "\t" $1}'
+      aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --region $region --query "Subnets[*].[Tags[?Key=='Name'].Value]" --output text | awk -F'\t' '{if (NR==1) print "Number \t Subnet"} {print NR-1 "\t" $1}'
     fi
     echo -e -n "${Green}Please choose the subnet you want to use: (number required) \n>> ${Color_Off}"
     read subnet
-    subnet_id=$(aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --query "Subnets[$subnet].SubnetId" --output text)
+    subnet_id=$(aws ec2 describe-subnets --filters "Name=vpc-id, Values=$vpc_id" --region $region --query "Subnets[$subnet].SubnetId" --output text)
     if [[ "$subnet_id" != "None" && $subnet =~ ^[0-9]+$ ]]; then
       break
     else
