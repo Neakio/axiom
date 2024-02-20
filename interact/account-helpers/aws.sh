@@ -101,7 +101,7 @@ function awssetup() {
   while true; do
     echo -e -n "${Green}Here are the differents VPCs available : \n${Color_Off}"
     #Get all the VPC on the account and display them
-    aws ec2 describe-vpcs --query "Vpcs[*].[Tags[?Key=='Name'].Value]" --region $region --output text | awk -F'\t' '{if (NR==1) print "Number \t Subnet"} {print NR-1 "\t" $1}'
+    aws ec2 describe-vpcs --query "Vpcs[*].[Tags[?Key=='Name'].Value]" --region $region --output text | awk -F'\t' '{if (NR==1) print "Number \t VPC"} {print NR-1 "\t" $1}'
     echo -e -n "${Green}Please enter the vpc number or id you want to use: (Default vpc, press enter) \n>> ${Color_Off}"
     read vpc
     if [[ $vpc == *"vpc"* ]];then
@@ -155,7 +155,7 @@ function awssetup() {
 
   echo -e "${BGreen}Creating an Axiom Security Group: ${Color_Off}"
   aws ec2 delete-security-group --group-name axiom >/dev/null 2>&1
-  sc="$(aws ec2 create-security-group --group-name axiom --vpc-id $vpc_id --description "Axiom SG") --tag-specifications 'ResourceType=security-group,Tags=[{Key=<Group>,Value=<axiom>}]'"
+  sc="$(aws ec2 create-security-group --group-name axiom --vpc-id $vpc_id --description "Axiom SG") --tag-specifications 'ResourceType=security-group,Tags=[{Key=Group,Value=axiom}]'"
 
   group_id="$(echo "$sc" | jq -r '.GroupId')"
   echo -e "${BGreen}Created Security Group: $group_id ${Color_Off}"
