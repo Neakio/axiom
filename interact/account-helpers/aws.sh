@@ -155,7 +155,8 @@ function awssetup() {
 
   echo -e "${BGreen}Creating an Axiom Security Group: ${Color_Off}"
   aws ec2 delete-security-group --group-name axiom >/dev/null 2>&1
-  sc="$(aws ec2 create-security-group --group-name axiom --vpc-id $vpc_id --description "Axiom SG")"
+  sc="$(aws ec2 create-security-group --group-name axiom --vpc-id $vpc_id --description "Axiom SG") --tag-specifications 'ResourceType=security-group,Tags=[{Key=<Group>,Value=<axiom>}]'"
+
   group_id="$(echo "$sc" | jq -r '.GroupId')"
   echo -e "${BGreen}Created Security Group: $group_id ${Color_Off}"
 

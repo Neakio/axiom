@@ -24,7 +24,7 @@ reboot() {
 
 # takes no arguments, outputs JSON object with instances
 instances() {
-	aws ec2 describe-instances
+	aws ec2 describe-instances --filters "Name=tag:Group,Values=axiom"
 }
 
 instance_id() {
@@ -68,7 +68,7 @@ instance_pretty() {
 	data=$(instances)
 
 	i=0
-	(echo "Instance,IP,Region,Size,Status" && echo $data | jq -r '.Reservations[].Instances[] | select(.State.Name != "terminated") | [.Tags?[]?.Value, .PublicIpAddress, .Placement.AvailabilityZone, .InstanceType, .State.Name] | @csv' && echo "_,_,_,_,_,") | sed 's/"//g' | column -t -s, | perl -pe '$_ = "\033[0;37m$_\033[0;34m" if($. % 2)'
+	(echo "Instance,IP,Region,Size,Status" && echo $data | jq -r '.Reservations[].Instances[] | select(.State.Name != "terminated") | [(.Tags[]? | select(.Key == "Name").Value), .PublicIpAddress, .Placement.AvailabilityZone, .InstanceType, .State.Name] | @csv' && echo "_,_,_,_,_,") | sed 's/"//g' | column -t -s, | perl -pe '$_ = "\033[0;37m$_\033[0;34m" if($. % 2)'
 }
 
 # identifies the selected instance/s
@@ -131,11 +131,11 @@ list_subdomains() {
 }
 # get JSON data for snapshots
 snapshots() {
-	aws ec2 describe-images --query 'Images[*]' --owners self
+	aws ec2 describe-images --query 'Images[*]' --owners self --filters "Name=tag:Group,Values=axiom"
 }
 
 get_snapshots() {
-	(echo "Name,Creation,Image ID" && aws ec2 describe-images --query 'Images[*]' --owners self | jq -r '.[] | [.Name,.CreationDate,.ImageId] | @csv' && echo "_,_,_,_") | sed 's/"//g' | column -t -s, | perl -pe '$_ = "\033[0;37m$_\033[0;34m" if($. % 2)'
+	(echo "Name,Creation,Image ID" && aws ec2 describe-images --query 'Images[*]' --owners self --filters "Name=tag:Group,Values=axiom" | jq -r '.[] | [.Name,.CreationDate,.ImageId] | @csv' && echo "_,_,_,_") | sed 's/"//g' | column -t -s, | perl -pe '$_ = "\033[0;37m$_\033[0;34m" if($. % 2)'
 }
 
 delete_record() {
@@ -315,12 +315,12 @@ create_instance() {
 	#keyid=$(doctl compute ssh-key list | grep "$sshkey_fingerprint" | awk '{ print $1 }')
 	if [[ $public_ip = true ]]; then
 		if [[ $spot == '{"MarketType":"spot"}' ]]; then
-			aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address --security-group-id "$security_group_id" --instance-market-options "$spot" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
+			aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address --security-group-id "$security_group_id" --instance-market-options "$spot" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name},{{Key=Group,Value=axiom}}]" 2>&1 >>/dev/null
 		else
-			aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
+			aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --associate-public-ip-address --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name},{Key=Group,Value=axiom}]" 2>&1 >>/dev/null
 		fi
 	else
-		aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --no-associate-public-ip-address --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name}]" 2>&1 >>/dev/null
+		aws ec2 run-instances --image-id "$image_id" --count 1 --instance-type "$size" --region "$region" --subnet-id "$subnet_id" --no-associate-public-ip-address --security-group-id "$security_group_id" --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$name},{Key=Group,Value=axiom}]" 2>&1 >>/dev/null
 	fi
 	sleep 60
 }
