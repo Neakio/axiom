@@ -154,11 +154,11 @@ function awssetup() {
   while true; do
     echo -e -n "${Green}Do you need to add a tag to the security group ? (y/n) \n${Color_Off}"
     read ans
-    if [[ $ans == "n" || $ans == "no" || $ans == "" ]]; then
+    if [[ "$ans" == "n" || "$ans" == "no" || "$ans" == "" ]]; then
       echo -e "${Blue}No tags needed${Color_Off}"
       ami_tags=""
       security_group_tags=""
-    elif [[ $ans == "y" || $ans == "yes" ]]; then
+    elif [[ "$ans" == "y" || "$ans" == "yes" ]]; then
       echo -e -n "${Green}Please enter the key string \n${Color_Off}"
       read skey
       echo -e -n "${Green}Please enter the value string \n${Color_Off}"
@@ -166,7 +166,7 @@ function awssetup() {
       security_group_tags="Key=${skey},Value=${svalue}"
       echo -e -n "${Green}Do you want to apply the same tag on the AMI ? (y/n) \n${Color_Off}"
       read ans
-      if [[ $ans == "y" || $ans == "yes"]]; then
+      if [[ "$ans" == "y" || "$ans" == "yes" ]]; then
         akey=$skey
         avalue=$svalue
         ami_tags="Key=${akey},Value=${avalue}"
