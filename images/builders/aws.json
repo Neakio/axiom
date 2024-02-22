@@ -11,10 +11,10 @@
             "secret_key": "{{ user `aws_secret_access_key` }}",
             "associate_public_ip_address": "{{ user `public_ip` }}",
             "tags": {
-              "{{split `=` (index (split `,` (user `tags`.`ami_tags`)) 0)}}": "{{split `=` (index (split `,` (user `tags`.`ami_tags`)) 1)}}"
+              "{{user `ami_tags` | splitList `=` | index 0}}": "{{user `ami_tags` | splitList `=` | index 1}}"
             },
             "instance_tags": {
-              "{{split `=` (index (split `,` (user `tags`.`ami_tags`)) 0)}}": "{{split `=` (index (split `,` (user `tags`.`ami_tags`)) 1)}}"
+              "{{user `ami_tags` | splitList `=` | index 0}}": "{{user `ami_tags` | splitList `=` | index 1}}"
             },
 	    "launch_block_device_mappings": [
     		{
