@@ -152,20 +152,20 @@ function awssetup() {
   fi
   #Asking tags
   while true; do
-    echo -e -n "${Green}Do you need to add a tag to the security group ? (y/n) \n>>${Color_Off}"
+    echo -e -n "${Green}Do you need to add a tag to the security group ? (y/n) \n>> ${Color_Off}"
     read ans
     if [[ "$ans" == "n" || "$ans" == "no" || "$ans" == "" ]]; then
-      echo -e "${Blue}No tags needed${Color_Off}"
+      echo -e "${Blue}No tags needed \n${Color_Off}"
       ami_tags=""
       security_group_tags=""
       break
     elif [[ "$ans" == "y" || "$ans" == "yes" ]]; then
-      echo -e -n "${Green}Please enter the key string \n>>${Color_Off}"
+      echo -e -n "${Green}Please enter the key string \n>> ${Color_Off}"
       read skey
-      echo -e -n "${Green}Please enter the value string \n>>${Color_Off}"
+      echo -e -n "${Green}Please enter the value string \n>> ${Color_Off}"
       read svalue
       security_group_tags="Key=${skey},Value=${svalue}"
-      echo -e -n "${Green}Do you want to apply the same tag on the AMI ? (y/n) \n>>${Color_Off}"
+      echo -e -n "${Green}Do you want to apply the same tag on the AMI ? (y/n) \n>> ${Color_Off}"
       read ans
       if [[ "$ans" == "y" || "$ans" == "yes" ]]; then
         akey=$skey
@@ -174,14 +174,17 @@ function awssetup() {
       fi
       break
     else
-      echo -e "${BRed}Please provide a correct answer, your entry didn't contain a valid input.${Color_Off}"
+      echo -e "${BRed}Please provide a correct answer, your entry didn't contain a valid input. \n${Color_Off}"
     fi
   done
 
   aws configure set default.region "$region"
 
   echo -e "${BGreen}Creating an Axiom Security Group: ${Color_Off}"
-  aws ec2 delete-security-group --group-name axiom >/dev/null 2>&1
+
+  existing_sec_id="$(aws ec2 describe-security-groups --filters Name=vpc-id,Values=$vpc_id Name=group-name,Values=axiom \
+    --query 'SecurityGroups[0].GroupId' --output text)"
+  aws ec2 delete-security-group --group-id $existing_sec_id >/dev/null 2>&1
   if [[ "$security_group_tags" != "" ]]; then
     sc="$(aws ec2 create-security-group --group-name axiom --vpc-id $vpc_id --description "Axiom SG" --tag-specifications "ResourceType=security-group,Tags=[{${security_group_tags}}]")"
   else

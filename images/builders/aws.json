@@ -6,9 +6,13 @@
             "instance_type": "{{ user `default_size` }}",
             "region": "{{ user `region` }}",
             "vpc_id": "{{ user `vpc_id` }}",
+            "security_group_id": "{{user `security_group_id`}}",
             "subnet_id": "{{ user `subnet_id` }}",
             "secret_key": "{{ user `aws_secret_access_key` }}",
             "associate_public_ip_address": "{{ user `public_ip` }}",
+            "tags": {
+              "{{split `=` (index (split `,` (user `ami_tags`)) 0)}}": "{{split `=` (index (split `,` (user `ami_tags`)) 1)}}"
+            },
 	    "launch_block_device_mappings": [
     		{
       		"device_name": "/dev/sda1",
