@@ -150,13 +150,40 @@ function awssetup() {
   else
     public_ip=false
   fi
+  #Asking tags
+  while true; do
+    echo -e -n "${Green}Do you need to add a tag to the security group ? (y/n) \n${Color_Off}"
+    read ans
+    if [[ $ans == "n" || "no" || "" ]];then
+      echo -e "${Blue}No tags needed${Color_Off}"
+      ami_tags=""
+      security_group_tags=""
+    elif [[ $ans == "y" || "yes" ]];then
+      echo -e -n "${Green}Please enter the key string \n${Color_Off}"
+      read skey
+      echo -e -n "${Green}Please enter the value string \n${Color_Off}"
+      read svalue
+      security_group_tags="Key=${skey},Value=${svalue}"
+      echo -e -n "${Green}Do you want to apply the same tag on the AMI ? (y/n) \n${Color_Off}"
+      read ans
+      if [[ $ans == "y" || "yes"]];then
+        akey=$skey
+        avalue=$svalue
+        ami_tags="Key=${akey},Value=${avalue}"
+    else
+      echo -e "${BRed}Please provide a correct answer, your entry didn't contain a valid input.${Color_Off}"
+    fi
+
+
 
   aws configure set default.region "$region"
 
   echo -e "${BGreen}Creating an Axiom Security Group: ${Color_Off}"
   aws ec2 delete-security-group --group-name axiom >/dev/null 2>&1
-  sc="$(aws ec2 create-security-group --group-name axiom --vpc-id $vpc_id --description "Axiom SG" --tag-specifications 'ResourceType=security-group,Tags=[{Key=Group,Value=axiom}]')"
-
+  if [[ $security_group_tags!= "" ]]; then
+    sc="$(aws ec2 create-security-group --group-name axiom --vpc-id $vpc_id --description "Axiom SG" --tag-specifications "ResourceType=security-group,Tags=[{${security_group_tags}}]")"
+  else
+    sc="$(aws ec2 create-security-group --group-name axiom --vpc-id $vpc_id --description "Axiom SG")"
   group_id="$(echo "$sc" | jq -r '.GroupId')"
   echo -e "${BGreen}Created Security Group: $group_id ${Color_Off}"
 
@@ -165,7 +192,7 @@ function awssetup() {
   group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')"
   sec_group_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].SecurityGroupRuleId')"
 
-  data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$sec_group_id\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"public_ip\":\"$public_ip\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
+  data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$sec_group_id\",\"security_group_tags\":\"$security_group_tags\",\"ami_tags\":\"$ami_tags\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"public_ip\":\"$public_ip\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
 
   echo -e "${BGreen}Profile settings below: ${Color_Off}"
   echo $data | jq
