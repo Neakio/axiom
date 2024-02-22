@@ -308,10 +308,11 @@ create_instance() {
 	security_group_id="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.security_group_id')"
 	public_ip="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.public_ip')"
 	security_group_tags="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.security_group_tags')"
-	if [[ $security_group_tags!=""]];then
+	if [[ "$security_group_tags" != "" ]]; then
 		tags="[{Key=Name,Value=$name},{${security_group_tags}}]"
 	else
 		tags="[{Key=Name,Value=$name}]"
+	fi
 	#sshkey_fingerprint="$(ssh-keygen -l -E md5 -f ~/.ssh/$sshkey.pub | awk '{print $2}' | cut -d : -f 2-)"
 	#keyid=$(doctl compute ssh-key import $sshkey \
 	#  --public-key-file ~/.ssh/$sshkey.pub \
