@@ -198,12 +198,7 @@ function awssetup() {
   if [[ "$onCloud" == true ]]; then
   TOKEN="$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")"
   publicIP="$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/public-ipv4)"
-    aws ec2 authorize-security-group-ingress \
-      --group-id "$group_id" \
-      --ip-permissions \
-          '[{"IpProtocol": "tcp", "FromPort": 0, "ToPort": 65535, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]}, \
-            {"IpProtocol": "udp", "FromPort": 0, "ToPort": 65535, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]}, \
-            {"IpProtocol": "icmp", "FromPort": -1, "ToPort": -1, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]}]'
+    aws ec2 authorize-security-group-ingress --group-id "$group_id" --ip-permissions '[{"IpProtocol": "tcp", "FromPort": 0, "ToPort": 65535, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]},{"IpProtocol": "udp", "FromPort": 0, "ToPort": 65535, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]},{"IpProtocol": "icmp", "FromPort": -1, "ToPort": -1, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]}]'
   fi
   group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')"
   #sec_group_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].SecurityGroupRuleId')" ?
