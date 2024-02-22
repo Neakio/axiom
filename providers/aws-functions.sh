@@ -307,7 +307,7 @@ create_instance() {
 	subnet_id="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.subnet_id')"
 	security_group_id="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.security_group_id')"
 	public_ip="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.public_ip')"
-	security_group_tags="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.security_group_tags')"
+	security_group_tags="$(cat "$AXIOM_PATH/axiom.json" | jq -r '.tag_key'):$(cat "$AXIOM_PATH/axiom.json" | jq -r '.tag_value')"
 	if [[ "$security_group_tags" != "" ]]; then
 		tags="[{Key=Name,Value=$name},{${security_group_tags}}]"
 	else

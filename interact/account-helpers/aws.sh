@@ -152,7 +152,7 @@ function awssetup() {
   fi
   #Asking tags
   while true; do
-    echo -e -n "${Green}Do you need to add a tag to the security group ? (y/n) \n>> ${Color_Off}"
+    echo -e -n "${Green}Do you need to add a tag to the ressources created ? (y/n) \n>> ${Color_Off}"
     read ans
     if [[ "$ans" == "n" || "$ans" == "no" || "$ans" == "" ]]; then
       echo -e "${Blue}No tags needed \n${Color_Off}"
@@ -161,17 +161,10 @@ function awssetup() {
       break
     elif [[ "$ans" == "y" || "$ans" == "yes" ]]; then
       echo -e -n "${Green}Please enter the key string \n>> ${Color_Off}"
-      read skey
+      read tkey
       echo -e -n "${Green}Please enter the value string \n>> ${Color_Off}"
-      read svalue
-      security_group_tags="Key=${skey},Value=${svalue}"
-      echo -e -n "${Green}Do you want to apply the same tag on the AMI ? (y/n) \n>> ${Color_Off}"
-      read ans
-      if [[ "$ans" == "y" || "$ans" == "yes" ]]; then
-        akey=$skey
-        avalue=$svalue
-        ami_tags="Key=${akey},Value=${avalue}"
-      fi
+      read tvalue
+      security_group_tags="Key=${tkey},Value=${tvalue}"
       break
     else
       echo -e "${BRed}Please provide a correct answer, your entry didn't contain a valid input. \n${Color_Off}"
@@ -198,7 +191,7 @@ function awssetup() {
   group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')"
   sec_group_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].SecurityGroupRuleId')"
 
-  data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$group_id\",\"security_group_tags\":\"$security_group_tags\",\"ami_tags\":\"$ami_tags\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"public_ip\":\"$public_ip\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
+  data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$group_id\",\"tag_key\":\"$tkey\",\"tag_value\":\"$tvalue\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"public_ip\":\"$public_ip\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
 
   echo -e "${BGreen}Profile settings below: ${Color_Off}"
   echo $data | jq
