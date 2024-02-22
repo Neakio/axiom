@@ -104,7 +104,7 @@ function awssetup() {
     aws ec2 describe-vpcs --query "Vpcs[*].[Tags[?Key=='Name'].Value]" --region $region --output text | awk -F'\t' '{if (NR==1) print "Number \t VPC"} {print NR-1 "\t" $1}'
     echo -e -n "${Green}Please enter the vpc number or id you want to use: (Default vpc, press enter) \n>> ${Color_Off}"
     read vpc
-    if [[ $vpc == *"vpc"* ]];then
+    if [[ $vpc == *"vpc"* ]]; then
       vpc_id=$vpc
     else
       vpc_id=$(aws ec2 describe-vpcs --filters --query "Vpcs[$vpc].VpcId" --region $region --output text)
@@ -170,11 +170,11 @@ function awssetup() {
         akey=$skey
         avalue=$svalue
         ami_tags="Key=${akey},Value=${avalue}"
+      fi
     else
       echo -e "${BRed}Please provide a correct answer, your entry didn't contain a valid input.${Color_Off}"
     fi
-
-
+  done
 
   aws configure set default.region "$region"
 
