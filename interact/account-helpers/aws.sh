@@ -196,11 +196,11 @@ function awssetup() {
   ######################################################################################################## we should add this to whitelist your IP - TODO
   group_rules="$(aws ec2 authorize-security-group-ingress --group-id "$group_id" --protocol tcp --port 2266 --cidr $security_source)"
   if [[ "$onCloud" == true ]]; then
-  TOKEN="$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")"
-  publicIP="$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/public-ipv4)"
+    TOKEN="$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")" >>/dev/null
+    publicIP="$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/public-ipv4)">>/dev/null
     aws ec2 authorize-security-group-ingress --group-id "$group_id" --ip-permissions '[{"IpProtocol": "tcp", "FromPort": 0, "ToPort": 65535, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]},{"IpProtocol": "udp", "FromPort": 0, "ToPort": 65535, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]},{"IpProtocol": "icmp", "FromPort": -1, "ToPort": -1, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]}]'
   fi
-  group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')"
+  group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')" >>/dev/null
   #sec_group_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].SecurityGroupRuleId')" ?
 
   data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$group_id\",\"tag_key\":\"$tkey\",\"tag_value\":\"$tvalue\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"public_ip\":\"$public_ip\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
