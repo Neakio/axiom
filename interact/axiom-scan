@@ -116,6 +116,7 @@ OUTPUT:
    -oG string[]         output as greppable, merge and sort unique (must also be supplied in the module using "ext":"oG")
    -oX string[]         output as XML/HTML (supported for nmap and masscan)(must also be supplied in the module using "ext":"xml")
    -oH string[]         output as HTML (supported for testssl only)(must also be supplied in the module using "ext":"html")
+   -oJ string[]         output as JSON (supported for Gau only)(must also be supplied in the module using "ext":"json")
    -csv string []       output as csv, extract csv header, merge and sort unique (must also be supplied in the module using "ext":"csv")
    --quiet              do not display findings to terminal
    --rm-logs            delete remote and local logs after scan completes
@@ -318,11 +319,18 @@ merge_output() {
         if [[ "$anew" == "true" ]]; then
             cat "$tmp/merge" | anew "$outfile"
         else
+            echo "cat $tmp/merge"
             mv "$tmp/merge" "$outfile"
         fi
+    elif [[ "$ext" == "json" ]]; then
+        echo "mode set to txt.. sorting unique."
+        find $tmp/output/ -type f -exec cat {} \; | sort -u > $tmp/merge
+        output_lines=$(wc -l $tmp/merge | tr -s ' ' | cut -d ' ' -f 1)
+        python3 "$AXIOM_PATH/interact/gau_json.py" -i "$tmp/merge" -o "$tmp/merge.json" >/dev/null 2>&1
+        mv "$tmp/merge.json" "$outfile"
     elif [[ "$ext" == "xml" ]]; then
         echo "Mode set to XML.. Merging Nmap XML output..."
-        "$AXIOM_PATH/interact/merge-xml.py" -d "$tmp/output" -o "$tmp/merge.xml" >> /dev/null
+        "$AXIOM_PATH/interact/merge-xml.py" -i "$tmp/output" -o "$tmp/merge.xml" >> /dev/null
         mv "$tmp/merge.xml" "$outfile"
         mv "$tmp/merge.xml.html" "$outfile.html"
     elif [[ "$ext" == "csv" ]]; then
@@ -332,7 +340,7 @@ merge_output() {
         find $tmp/output/ -type f -exec cat {} \; | grep -v "$header" | sort -u -V >> "$outfile"
         output_lines=$(wc -l $outfile | tr -s ' ' | cut -d ' ' -f 1)
     elif [[ "$ext" == "html" ]]; then
-        echo "Mode set to XML.. Merging TestSSL html output..."
+        echo "Mode set to HTML.. Merging TestSSL html output..."
         python3 "$AXIOM_PATH/interact/merge-testssl.py" "$tmp/output/*.html" "$tmp/merge.html" >/dev/null 2>&1
         mv "$tmp/merge.html" "$outfile.html"
     elif [[ "$ext" == "" ]] || [[ "$ext" == "dir" ]];  then
@@ -466,6 +474,11 @@ do
             pass+=($n)
         fi
         if [[ "$arg" == "-oH" ]]; then
+            if [[ "$module" != "testssl" ]]; then
+                echo -e "${BRed}ERROR ! Invalid module selected \n ${BYellow}Only the TestSSL module is supported for HTML output${Color_Off}"
+                help
+                exit 1
+            fi
             n=$((i+1))
             ext="html"
             outfile=$(echo ${!n})
@@ -483,6 +496,20 @@ do
             pass+=($i)
             pass+=($n)
         fi 
+        if [[ "$arg" == "-oJ" ]]; then
+            if [[ "$module" != "gau" ]]; then
+                echo -e "${BRed}ERROR ! Invalid module selected \n${BYellow}Only the Gau module is supported for JSON output${Color_Off}"
+                help
+                exit 1
+            fi
+            n=$((i+1))
+            ext="json"
+            outfile=$(echo ${!n})
+            echo "using json as extention for: '$outfile'"
+            set=true
+            pass+=($i)
+            pass+=($n)
+        fi
         if [[ "$arg" == "-anew" ]] || [[ "$arg" == "--anew" ]] ; then
             n=$((i+1))
             anew="true"
