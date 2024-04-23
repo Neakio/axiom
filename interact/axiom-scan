@@ -323,11 +323,17 @@ merge_output() {
             mv "$tmp/merge" "$outfile"
         fi
     elif [[ "$ext" == "json" ]]; then
-        echo "mode set to txt.. sorting unique."
-        find $tmp/output/ -type f -exec cat {} \; | sort -u > $tmp/merge
-        output_lines=$(wc -l $tmp/merge | tr -s ' ' | cut -d ' ' -f 1)
-        python3 "$AXIOM_PATH/interact/gau_json.py" -i "$tmp/merge" -o "$tmp/merge.json" >/dev/null 2>&1
-        mv "$tmp/merge.json" "$outfile"
+        if [[ "$module" == "testssl" ]]; then
+           echo "mode set to json.. merging testssl..."
+           find $tmp/output/ -type f -exec jq -s . {} \; > $tmp/merge
+           mv "$tmp/merge" "$outfile"
+        else
+           echo "mode set to txt.. sorting unique."
+           find $tmp/output/ -type f -exec cat {} \; | sort -u > $tmp/merge
+           output_lines=$(wc -l $tmp/merge | tr -s ' ' | cut -d ' ' -f 1)
+           python3 "$AXIOM_PATH/interact/gau_json.py" -i "$tmp/merge" -o "$tmp/merge.json" >/dev/null 2>&1
+           mv "$tmp/merge.json" "$outfile"
+        fi
     elif [[ "$ext" == "xml" ]]; then
         echo "Mode set to XML.. Merging Nmap XML output..."
         "$AXIOM_PATH/interact/merge-xml.py" -i "$tmp/output" -o "$tmp/merge.xml" >> /dev/null
@@ -497,7 +503,7 @@ do
             pass+=($n)
         fi 
         if [[ "$arg" == "-oJ" ]]; then
-            if [[ "$module" != "gau" ]]; then
+            if [[ "$module" != "gau" ]] && [[ "$module" != "testssl" ]]; then
                 echo -e "${BRed}ERROR ! Invalid module selected \n${BYellow}Only the Gau module is supported for JSON output${Color_Off}"
                 help
                 exit 1
