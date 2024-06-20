@@ -172,12 +172,43 @@ function awssetup() {
     fi
   done
   # Ask for security group source filtering
-  echo -e -n "${Green}Choose the source for the inbound rules (default 0.0.0.0/0) \n>> ${Color_Off}"
-  read security_source
-  if [[ "$security_source" == "" ]]; then
-    security_source="0.0.0.0/0"
-  fi
-
+  ip_regex='^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'
+  while true; do
+    echo -e -n "${Green}Choose the source for the inbound rules (default 0.0.0.0/0). Enter None if not needed. \n>> ${Color_Off}"
+    read security_source
+    if [[ $security_source =~ $ip_regex ]]; then
+      # Extract IP and prefix
+      IFS='/' read -r ip prefix <<< "$ip_cidr"
+      # Validate IP address
+      IFS='.' read -r -a octets <<< "$ip"
+      valid_ip=true
+      for octet in "${octets[@]}"; do
+        if (( octet < 0 || octet > 255 )); then
+          echo -e "${BRed}Invalid IP address: Octet $octet is out of range \n${Color_Off}"
+          valid_ip=false
+          break
+        fi
+      done
+      # Validate prefix
+      if (( prefix < 0 || prefix > 32 )); then
+        echo -e "${BRed}Invalid CIDR prefix: $prefix is out of range \n${Color_Off}"
+        valid_ip=false
+      fi
+    
+      if $valid_ip; then
+        break
+      fi
+    # Take default IP
+    elif [[ "$security_source" == "" ]]; then
+      security_source="0.0.0.0/0"
+      break
+    # Not needed case
+    elif [[ "$security_source" == "None" ]]; then
+      break
+    else
+      echo -e "${BRed}Please provide a correct answer, your entry didn't contain a valid input. Expected format: x.x.x.x/x \n${Color_Off}"
+    fi
+  done
   aws configure set default.region "$region"
 
   echo -e "${BGreen}Creating an Axiom Security Group: ${Color_Off}"
@@ -194,13 +225,15 @@ function awssetup() {
   echo -e "${BGreen}Created Security Group: $group_id ${Color_Off}"
 
   ######################################################################################################## we should add this to whitelist your IP - TODO
-  group_rules="$(aws ec2 authorize-security-group-ingress --group-id "$group_id" --protocol tcp --port 2266 --cidr $security_source)"
-  if [[ "$onCloud" == true ]]; then
-    TOKEN="$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")" >>/dev/null
-    publicIP="$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/public-ipv4)">>/dev/null
-    aws ec2 authorize-security-group-ingress --group-id "$group_id" --ip-permissions '[{"IpProtocol": "tcp", "FromPort": 0, "ToPort": 65535, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]},{"IpProtocol": "udp", "FromPort": 0, "ToPort": 65535, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]},{"IpProtocol": "icmp", "FromPort": -1, "ToPort": -1, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]}]'
+  if [[ "$security_source" != "None" ]]; then
+    group_rules="$(aws ec2 authorize-security-group-ingress --group-id "$group_id" --protocol tcp --port 2266 --cidr $security_source)"
   fi
-  group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')" >>/dev/null
+  if [[ "$onCloud" == true ]]; then
+    TOKEN="$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")" >/dev/null 2>&1
+    publicIP="$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/public-ipv4)">/dev/null 2>&1
+    aws ec2 authorize-security-group-ingress --group-id "$group_id" --ip-permissions '[{"IpProtocol": "tcp", "FromPort": 0, "ToPort": 65535, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]},{"IpProtocol": "udp", "FromPort": 0, "ToPort": 65535, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]},{"IpProtocol": "icmp", "FromPort": -1, "ToPort": -1, "IpRanges": [{"CidrIp": "'"$publicIP"/32'"}]}]' >/dev/null 2>&1
+  fi
+  group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')" >/dev/null 2>&1
   #sec_group_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].SecurityGroupRuleId')" ?
 
   data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$group_id\",\"tag_key\":\"$tkey\",\"tag_value\":\"$tvalue\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"public_ip\":\"$public_ip\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
