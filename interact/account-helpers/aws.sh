@@ -153,7 +153,7 @@ function awssetup() {
   fi
   # Asking tags
   while true; do
-    echo -e -n "${Green}Do you need to add a tag to the ressources created ? (y/n) \n>> ${Color_Off}"
+    echo -e -n "${Green}Do you need to add a tag to the resources created ? (y/n) \n>> ${Color_Off}"
     read ans
     if [[ "$ans" == "n" || "$ans" == "no" || "$ans" == "" ]]; then
       echo -e "${Blue}No tags needed \n${Color_Off}"
