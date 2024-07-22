@@ -69,8 +69,8 @@ function help(){
 cat << EOF
 axiom-scan provides easy distribution of arbitrary binaries and scripts.
 axiom-scan splits user-provided input files (target lists), wordlists and configuration files and uploads them to a unique scan working directory on the remote instance.
-axiom-scan combines user-provided command-line arguments with commands in the module and executes the final command on the remote instance.
-axiom-scan downloads and merges scan output in a variety of different formats, specified by the extension in the module (dir, txt, csv, xml).
+axiom-scan combines user-provided command-line arguments with commands in the module (~/.axiom/modules) and executes the final command on the remote instance.
+axiom-scan downloads and merges scan output in a variety of different formats, specified by the extension in the module (dir, txt, csv, xml, none).
 individual scanning operations are executed from a detacted tmux session (\$module+\$timestamp) inside a unique scan working directory (/home/op/scan/\$module+\$timestamp) on the remote instances.
 
 Usage:
@@ -88,6 +88,7 @@ INPUT:
    string[]              required positional first argument must always be an input file, this can be a list of URLs, IPs, hostnames, etc
    --dont-shuffle        do not randomize input file before uploading (default is to randomize)
    --dont-split          do not split input file, upload entire input file to every instance (default is to split the input file)
+   --expand-cidr         automatically expand any subnet in the input file (default does not expand subnets)
 
 MODULE:
    -m string[]           the axiom-scan module to use with the scan (must be a JSON file in ~/.axiom/modules)
@@ -104,7 +105,7 @@ CONFIGURATIONS:
    --local-config string[]     replace _config_ in module with user-provided local configuration file to upload (must be a local configuration file)
 
 OPTIMIZATIONS:
-   --disable-oneshot           by default, if a module contains the string _target_ it is executed as a one-shot module. Use this flag to force disable
+   --disable-oneshot           by default, if a module contains the string _target_ or _safe-target_ it is executed as a one-shot module. Use this flag to force disable
    --max-runtime DURATION[]    kill scan if still running after DURATION. DURATION is a floating point number with an optional suffix: 's' for seconds (the default), 'm' for minutes, 'h' for hours or 'd' for days.
    --preflight-timeout int[]   specifies the timeout (in seconds) used when connecting to the SSH server, instead of using the default 15 seconds
    --skip-preflight            do not automatically remove instances that can not be reached (default removes instances from the queue that can not be reached)
@@ -147,10 +148,13 @@ clean_up() {
     echo -e "${Green}CTRL+C Interrupt, cleaning up and downloading output..${Color_Off}."
     $interlace_cmd_nobar -c "$ssh_command _target_ '[ -f $scan_dir/_target_ ] && echo _target_ scan finished || echo _target_ scan was still running but downloading partial results'  >> $tmp/logs/_target_ 2>&1 "
     kill -0 $tailPID 2>  /dev/null && kill -9 $tailPID  &> /dev/null
-    if [[ "$command" =~ "_target_" ]]; then
-     $interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/output/ $tmp/output/ --cache -F=$sshconfig >/dev/null 2>&1"
+    if [[ "$command" =~ "_target_" ]] || [[ "$command" =~ "_safe-target_" ]]; then
+     $interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/output/ $tmp/output/_target_ --cache -F=$sshconfig >/dev/null 2>&1"
     else
-     $interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/output $tmp/output/_target_.$ext --cache -F=$sshconfig >/dev/null 2>&1"
+      if [[ "$ext" == "none" ]] ; then
+       ext=''
+      fi
+    $interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/output $tmp/output/_target_.$ext --cache -F=$sshconfig >/dev/null 2>&1"
     fi
     merge_output
     echo -e "${Blue}killing remote processes in a backgroud job${Color_Off}"
@@ -213,6 +217,9 @@ apply_wordlist() {
     fi
  }
 
+###########################################################################################################
+#  Providing a config in modules can be done with _config_, Think of this like a placeholder/variable replacement for config files
+#
 apply_config() {
     command="$1"
     config="$2"
@@ -330,37 +337,33 @@ merge_output() {
         echo "$header" > "$outfile"
         find $tmp/output/ -type f -exec cat {} \; | grep -v "$header" | sort -u -V >> "$outfile"
         output_lines=$(wc -l $outfile | tr -s ' ' | cut -d ' ' -f 1)
-    elif [[ "$ext" == "" ]] || [[ "$ext" == "dir" ]];  then
-            echo "Mode set to directory... Merging directories..."
-            mkdir $tmp/merge
-            find $tmp/output -type f -print0 | xargs -0 -I{} cp --backup=t {} $tmp/merge
-            output_lines=$(ls $tmp/merge | wc -l)
-          if [ -f "$outfile" ] ; then
-             rm -rf "$outfile"
-            fi
-            mv $tmp/merge "$outfile"
-        if [[ "$module" == "gowitness" ]]; then
-            if ! [ -x "$(command -v gowitness)" ]; then
-            echo -e "${Blue}Installing gowitness...${Color_Off}"
-            go install github.com/sensepost/gowitness@latest
-            fi
-            echo "Downloading gowitness databases..."
-            mkdir -p "$tmp/dbs/"
-            $interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/gowitness.sqlite3 $tmp/dbs/_target_.sqlite3 --cache -F=$sshconfig>> /dev/null"
-            echo "Merging databases..."
-            gowitness merge --input-path "$tmp/" -o "$outfile/gowitness.sqlite3"
-            echo -e "${Green}RUN: '${Blue}gowitness server -D $outfile/gowitness.sqlite3 -P $outfile/${Color_Off}' for reporting"
+    elif [[ "$ext" == "none" ]]; then
+        echo "Mode set to none, not merging..."
+        if [ -f "$outfile" ] ; then
+         rm -rf "$outfile"
         fi
-           if [[ "$module" == "naabu-nmap" ]]; then
-            echo "Merging naabu and nmap output"
-            find . -name "*.txt" | xargs cat | sort -u > $outfile/final_naabu.txt
-            echo "Merging Nmap XML output..."
-            "$AXIOM_PATH/interact/merge-xml.py" -d "$outfile" -o "$outfile/final_nmap.xml" >> /dev/null
-           if [ -f "$outfile" ] ; then
-            rm -rf $outfile/naabu*
-            rm -rf $outfile/nmap*
-           fi
-            echo -e "${Green}Done: '${Blue}Merging both naabu ouput and nmap${Color_Off}'"
+        mv $tmp/output "$outfile"        
+        output_lines=$(ls $outfile | wc -l)
+    elif [[ "$ext" == "" ]] || [[ "$ext" == "dir" ]];  then
+        echo "Mode set to directory... Merging directories..."
+        mkdir $tmp/merge
+        find $tmp/output -type f -print0 | xargs -0 -I{} cp --backup=t {} $tmp/merge
+        output_lines=$(ls $tmp/merge | wc -l)
+        if [ -f "$outfile" ] ; then
+         rm -rf "$outfile"
+        fi
+        mv $tmp/merge "$outfile"
+        if [[ "$module" == "gowitness" ]]; then
+         if ! [ -x "$(command -v gowitness)" ]; then
+          echo -e "${Blue}Installing gowitness...${Color_Off}"
+          go install github.com/sensepost/gowitness@latest
+         fi
+        echo "Downloading gowitness databases..."
+        mkdir -p "$tmp/dbs/"
+        $interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/gowitness.sqlite3 $tmp/dbs/_target_.sqlite3 --cache -F=$sshconfig>> /dev/null"
+        echo "Merging databases..."
+        gowitness merge --input-path "$tmp/" -o "$outfile/gowitness.sqlite3"
+        echo -e "${Green}RUN: '${Blue}gowitness server -D $outfile/gowitness.sqlite3 -P $outfile/${Color_Off}' for reporting"
         fi
     fi
 }
@@ -399,6 +402,8 @@ preflight_timeout=15
 max_scan_runtime=0
 cycle_regions="false"
 stdout_only="false"
+unsafe="false"
+expand_cidr="false"
 
 ###########################################################################################################
 #  Parse command line arguments 
@@ -583,7 +588,12 @@ do
             pass+=($i)
             pass+=($n)
         fi
-        if [[ "$arg" == "--fleet" ]] || [[ "$arg" == "-f" ]]; then
+        if [[ "$arg" == "--expand-cidr" ]]; then
+            expand_cidr="true"
+            set=true
+            pass+=($i)
+        fi
+        if [[ "$arg" == "--fleet" ]]; then
             n=$((i+1))
             fleet=$(echo ${!n})
             set=true
@@ -618,6 +628,11 @@ do
         fi
         if [[ "$arg" == "--dont-split" ]]; then
             split="false"
+            set=true
+            pass+=($i)
+        fi
+        if [[ "$arg" == "--unsafe" ]]; then
+            unsafe="true"
             set=true
             pass+=($i)
         fi
@@ -802,33 +817,36 @@ trap clean_up SIGINT SIGTERM
 ###########################################################################################################
 #  Destination directory on the instances and the command used to SSH to them
 #  Add default SSH commands
-#  Add default interlace command
+#  Add ssh socket check and exit commands
 #
 scan_dir="/home/op/scan/$uid"
 ssh_command="ssh -F $sshconfig -o StrictHostKeyChecking=no"
 ssh_check_command="ssh -F $sshconfig -O check -o StrictHostKeyChecking=no"
 ssh_exit_command="ssh -F $sshconfig -O exit -o StrictHostKeyChecking=no"
 
+###########################################################################################################
+# Add default interlace commandmand
+#
 interlace_cmd="$(which interlace) --silent -tL $tmp/hosts -threads $total_instances"
 interlace_cmd_nobar="$(which interlace) --no-bar --silent -tL $tmp/hosts -threads $total_instances"
 
 ###########################################################################################################
-# preflight check
+# preflight check, remove instances from the Interlace queue that cant be reached
 #
 function preflight_function(){
 if [[ $pre_flight == true ]]; then
-rm -f "$tmp/hosts_preflight"
-ssh_command_preflight="ssh -F $sshconfig -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o ConnectTimeout=$preflight_timeout"
-interlace_cmd="$(which interlace) --silent -tL $tmp/hosts -threads $total_instances"
-$interlace_cmd_nobar -c "$ssh_check_command _target_ 2> /dev/null && (timeout $preflight_timeout $ssh_command_preflight _target_ exit || $ssh_exit_command _target_ ) "  #>> /dev/null 2>&1
-$interlace_cmd -c "$ssh_command_preflight _target_ 'echo _target_' >> $tmp/hosts_preflight"
-cat "$tmp/hosts_preflight" | sort -u  > "$tmp/hosts"
-cp "$tmp/hosts_preflight" "$tmp/selected.conf"
-total_instances="$(wc -l "$tmp/hosts" | awk '{ print $1 }')"
-lines="$(wc -l "$input_file" | awk '{ print $1 }')"
-total=$(wc -l "$tmp/selected.conf" | awk '{ print $1 }')
-instances=$(cat "$tmp/hosts")
-interlace_cmd_nobar="$(which interlace) --no-bar --silent -tL $tmp/hosts -threads $total_instances"
+   rm -f "$tmp/hosts_preflight"
+   ssh_command_preflight="ssh -F $sshconfig -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o ConnectTimeout=$preflight_timeout"
+   interlace_cmd="$(which interlace) --silent -tL $tmp/hosts -threads $total_instances"
+   $interlace_cmd_nobar -c "$ssh_check_command _target_ 2> /dev/null && (timeout $preflight_timeout $ssh_command_preflight _target_ exit || $ssh_exit_command _target_ ) "  #>> /dev/null 2>&1
+   $interlace_cmd -c "$ssh_command_preflight _target_ 'echo _target_' >> $tmp/hosts_preflight"
+   cat "$tmp/hosts_preflight" | sort -u  > "$tmp/hosts"
+   cp "$tmp/hosts_preflight" "$tmp/selected.conf"
+   total_instances="$(wc -l "$tmp/hosts" | awk '{ print $1 }')"
+   lines="$(wc -l "$input_file" | awk '{ print $1 }')"
+   total=$(wc -l "$tmp/selected.conf" | awk '{ print $1 }')
+   instances=$(cat "$tmp/hosts")
+   interlace_cmd_nobar="$(which interlace) --no-bar --silent -tL $tmp/hosts -threads $total_instances"
 fi
 }
 
@@ -850,7 +868,7 @@ if [[ "$ext" == "default" ]]; then
 fi
 
 ###########################################################################################################
-#  Figure out what wordlist to use -
+#  Figure out what wordlist to use 
 #
 wordlist="$(parse_module "$module" "$ext" |  jq -r '.wordlist // empty')"
 if [[ "$user_specified_wordlist" != "false" ]]; then
@@ -901,7 +919,7 @@ fi
 #
 echo -e "${BGreen}creating scan working directory at ${Color_Off}${Blue}: /home/op/scan/$uid/${Color_Off}"
 rawcommand="$(parse_module "$module" "$ext" | jq -r '.command')"
-if ([[ "$rawcommand" =~ "_target_" ]] || [[ "$ext" ==  "" ]] || [[ "$ext" == "dir" ]]) && [[ "$disable_oneshot" != "true" ]]; then
+if ([[ "$rawcommand" =~ "_target_" ]] || [[ "$rawcommand" =~  "_safe-target_" ]] || [[ "$ext" ==  "" ]] || [[ "$ext" == "dir" ]]) && [[ "$disable_oneshot" != "true" ]]; then
     $interlace_cmd_nobar -c "$ssh_command _target_ 'mkdir -p $scan_dir/output'" >/dev/null 2>&1
 else
 
@@ -967,12 +985,18 @@ fi
 fi
 
 ###########################################################################################################
-#  If a wordlist is specified add it to the command
-#  If command line args are supplied, combine commands in the module with the arguments passed from the command line into final command
-#  Add escaped command value used for $HOME/.axiom/stats.log file
+#  Parse command from module
+#  Transparently replace _target_ with _safe-target_
 #
 command="$(parse_module "$module" "$ext" | jq -r '.command')"
+command=${command//_target_/_safe-target_}  
 
+###########################################################################################################
+#  If command line args are supplied, combine commands in the module with the arguments passed from the command line into final command (i.e. add_extra_args)
+#  If a wordlist is specified add it to the command
+#  If a config is specified add it to the command
+#  Add escaped command value used for $HOME/.axiom/stats.log file
+#
 [[ ! -z "$args" ]] && command="$(add_extra_args "$command" "$args")"
 
 if [[ "$command" =~ "_wordlist_" ]] ||  [[ "$local_wordlist" != "false" ]] || [[ "$nuclei_templates" != "false" ]] || [[ "$distribute_wordlist" != "false" ]]; then
@@ -998,6 +1022,16 @@ if [[ "$user_specified_threads" != "" ]]; then
 fi
 
 ###########################################################################################################
+#  expand any cidrs in the target list
+#
+if [[ "$expand_cidr" == "true" ]]; then
+    echo -e "${Blue}expanding cidrs in target list...${Color_Off}"
+    "$AXIOM_PATH/interact/expand_cidr.py" "$input_file" --silent > $tmp/expanded_input
+    input_file=$(echo $tmp/expanded_input)
+    lines="$(wc -l "$input_file" | awk '{ print $1 }')"
+fi
+
+###########################################################################################################
 #  Display some stats prior to scanning
 #
 echo -e "${BGreen}module: ${Color_Off}[${Blue} $module ${Color_Off}]${BGreen} | ${BGreen}module args: ${Color_Off}[${Blue} $args ${Color_Off}] ${BGreen}| ${BGreen}input: ${Color_Off}[${Blue} $lines lines ${Color_Off}]${BGreen} |"
@@ -1005,23 +1039,14 @@ echo -e "${BGreen}instances: ${Blue} $total_instances  ${Color_Off}[${Blue} $(ec
 echo -e "${BGreen}command: ${Color_Off}[${Blue} $command ${Color_Off}]${BGreen} | ${BGreen}ext: ${Color_Off}[${Blue} "$ext" ${Color_Off}]${BGreen} | ${BGreen}threads: ${Color_Off}[${Blue} "$threads" ${Color_Off}]${BGreen}"
 
 ###########################################################################################################
-#  If a One shot Module is used:
-#  Store Interlace command in a file and upload it to remote instances with axiom-scp
+#  Store command in a file and upload it to remote instances with axiom-scp
 #
-if [[ "$command" =~ "_target_" ]] || [[ "$ext" ==  "" ]] || [[ "$ext" == "dir" ]]; then
-    echo "$command" > "$tmp/command"
-    $interlace_cmd_nobar -c "axiom-scp $tmp/command _target_:$scan_dir/command --cache -F=$sshconfig >/dev/null 2>&1" >/dev/null 2>&1
-else
-
-###########################################################################################################
-#  If a Simple Module is used:
-#  Store bash command in a file and upload it to remote instances with axiom-scp
-    echo "$command" > "$tmp/command"
-    $interlace_cmd_nobar -c "axiom-scp $tmp/command _target_:$scan_dir/command --cache -F=$sshconfig >/dev/null 2>&1" >/dev/null 2>&1
-fi
+echo "$command" > "$tmp/command"
+$interlace_cmd_nobar -c "axiom-scp $tmp/command _target_:$scan_dir/command --cache -F=$sshconfig >/dev/null 2>&1" >/dev/null 2>&1
 
 ###########################################################################################################
 #  split target list or copy target list
+#  delete expanded_input if --expand-cidr is used
 # 
 if [[ "$split" == "true" ]]; then
     echo -e "${Blue}spliting and distributing input file...${Color_Off}"
@@ -1031,26 +1056,22 @@ if [[ "$split" == "true" ]]; then
     for i in $(echo $instances); do cp "$input_file" $tmp/input/$i ; done 
 fi
 
+if [[ "$expand_cidr" == "true" ]]; then
+    rm -f $tmp/expanded_input
+fi
+
 ###########################################################################################################
 #  use axiom-scp to upload each input file to a remote instance
 #
 $interlace_cmd_nobar -c "$AXIOM_PATH/interact/axiom-scp $tmp/input/_target_ _target_:$scan_dir/input --cache -F=$sshconfig >/dev/null 2>&1; touch $tmp/logs/_target_" && echo -n -e "[ ${Green}OK${Color_Off} ]\n" || echo -n -e "[ ${Green}FAIL${Color_Off} ]\n" 
 
 ###########################################################################################################
-#  Dont tail if quiet is true
-# 
-if [[ "$quiet" == "false" ]]; then
-    tail -q -f $tmp/logs/* &
-    tailPID=$!
-fi
-
-###########################################################################################################
 #  This function is spanwed in the background and periodically probes all instances to see if their part of the scan has completed.
 #  When the remote scan process has finished, it creates a file named $HOSTNAME in the remote scan working directory. During the
 #  scan, axiom checks for each $HOSTNAME file to know that part of the scan has completed.
 #  Once all instances have created their $HOSTNAME file, the results are downloaded and this function exits.
-#  Simple Modules results are downloaded once all instances have completed ( all $HOSTNAMES files need to be downloaded).
-#  One-shot Modules do not wait for the $HOSTNAME file prior to downloading. one-shot module results are downloaded every 40 seconds.
+#  One-shot modules results are downloaded every 40 seconds.
+#  Simple-Modules results are downloaded when one instance is finished with its scan
 #
 function downloader () {
 while true; do
@@ -1061,14 +1082,14 @@ cat $tmp/status/completed/hosts | sort -u | wc -l | tee $tmp/status/downloader_i
 cat $tmp/status/completed/hosts | sort -u | tee $tmp/status/downloader_hosts  >/dev/null 2>&1
 
 downloader_cmd="$(which interlace) --no-bar --silent -tL $tmp/status/downloader_hosts -threads $(cat $tmp/status/downloader_instances)" 
-if [[ "$command" =~ "_target_" ]]; then
-$interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/output/ $tmp/output/_target_ --cache -F=$sshconfig >/dev/null 2>&1" 
+if [[ "$command" =~ "_target_" ]] || [[ "$command" =~ "_safe-target_" ]]; then
+$interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/output/ $tmp/output/_target_ --delete --cache -F=$sshconfig >/dev/null 2>&1" 
 else
 if [[ "$(cat $tmp/status/downloader_instances)" -eq "0"  ]]; then
  sleep 10
  continue
 fi
-$downloader_cmd -c "axiom-scp _target_:$scan_dir/output $tmp/output/_target_.$ext --cache -F=$sshconfig >/dev/null 2>&1"
+$downloader_cmd -c "axiom-scp _target_:$scan_dir/output $tmp/output/_target_.$ext --delete --cache -F=$sshconfig >/dev/null 2>&1"
 fi
 
 ###########################################################################################################
@@ -1105,18 +1126,34 @@ go install github.com/tomnomnom/anew@latest >> /dev/null 2>&1
 fi
 
 ###########################################################################################################
-#  display STDOUT only flag (default is false and displays stdout & stderr
+#  display STDOUT only flag (default is false and displays stdout & stderr)
 #
 if [[ "$stdout_only" == "true" ]]; then
 stderr_log="/dev/null"
+tail_suppress_headers="-q" 
 else
 stderr_log="stderr.log"
 fi
 
 ###########################################################################################################
+#  Dont tail if quiet is true
+#
+if [[ "$quiet" == "false" ]]; then
+    tail $tail_suppress_headers -f $tmp/logs/* &
+    tailPID=$!
+fi
+
+###########################################################################################################
+#  undocumented --unsafe flag, do not use this unless you know what you are doing
+#
+if [[ "$unsafe" == "true" ]]; then
+ dontexpandcidr="--no-cidr"
+fi
+
+###########################################################################################################
 #  Start the One Shot Module scan by SSH-ing into each instance and running the Interlace command on every remote instance
 #
-if [[ "$command" =~ "_target_" ]] && [[ "$disable_oneshot" != "true" ]]; then
+if [[ "$command" =~ "_target_" ]] || [[ "$command" =~ "_safe-target_" ]]&& [[ "$disable_oneshot" != "true" ]]; then
  echo -e "${BRed}[*]${Red} ENABLING ONESHOT MODE! STARTING $(($total_instances * $threads)) TOTAL THREADS. Using $threads threads per instance with $total_instances instances...${Color_Off}"
  touch $tmp/status/completed/hosts
  touch $tmp/status/completed/status
@@ -1126,7 +1163,7 @@ if [[ "$command" =~ "_target_" ]] && [[ "$disable_oneshot" != "true" ]]; then
  timeout $max_scan_runtime $interlace_cmd_nobar -c "$ssh_command _target_ 'cd $scan_dir && touch stderr.log stdout.log && tail -f $stderr_log & tail -f stdout.log' >> $tmp/logs/_target_ 2>&1 " &
  remotetailPID=$!
  echo $remotetailPID > $tmp/status/remotetailPID
- $interlace_cmd_nobar -c "$ssh_command _target_ 'tmux new -d -s $uid && tmux send-keys -t $uid \"cd $scan_dir; interlace -threads $threads -tL input -cL command -o output > >(tee -a stdout.log) 2> >(tee -a stderr.log >&2) ; touch _target_\" ENTER ' \"&& tmux send-keys -t $uid exit ENTER\""
+ $interlace_cmd_nobar -c "$ssh_command _target_ 'tmux new -d -s $uid && tmux send-keys -t $uid \"cd $scan_dir; interlace $dontexpandcidr -threads $threads -tL input -cL command -o output > >(tee -a stdout.log) 2> >(tee -a stderr.log >&2) ; touch _target_\" ENTER ' \"&& tmux send-keys -t $uid exit ENTER\""
  wait $remotetailPID  >> /dev/null 2>&1
  $interlace_cmd_nobar -c "$ssh_command _target_ '[ -f $scan_dir/_target_ ] && echo _target_ scan finished || echo _target_ scan was still running but downloading partial results' >> $tmp/logs/_target_ 2>&1"
  $interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/output/ $tmp/output/_target_ --cache -F=$sshconfig >/dev/null 2>&1"
@@ -1146,6 +1183,9 @@ else
  $interlace_cmd_nobar -c "$ssh_command _target_ 'tmux new -d -s $uid && tmux send-keys -t $uid \"cd $scan_dir; bash -i command  > >(tee -a stdout.log) 2> >(tee -a stderr.log >&2) ; touch _target_\" ENTER ' \"&& tmux send-keys -t $uid exit ENTER\""
  wait $remotetailPID  >> /dev/null 2>&1
  $interlace_cmd_nobar -c "$ssh_command _target_ '[ -f $scan_dir/_target_ ] && echo _target_ scan finished || echo _target_ scan was still running but downloading partial results' >> $tmp/logs/_target_ 2>&1"
+ if [[ "$ext" == "none" ]] ; then
+  ext=''
+ fi
  $interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/output $tmp/output/_target_.$ext --cache -F=$sshconfig >/dev/null 2>&1"
 fi
 
@@ -1165,6 +1205,9 @@ if [[ "$shutdown_when_done" == "true" ]]; then
     done
 fi
 
+###########################################################################################################
+#  get some runtime stats 
+#
 end=$(date +%s)
 runtime=$((end-begin))
 time=$(formatSeconds $runtime)
