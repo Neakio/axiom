@@ -62,6 +62,7 @@ function awssetup() {
   if curl -s http://169.254.169.254/latest/meta-data/instance-id &>/dev/null; then
     onCloud=true
     # Means that the instance is on AWS and skip the Access Key
+    # /!\ The instance needs IAM Policies on ec2 to perform installation
     :
   else
     # Doesn't run on AWS and need Access Key
@@ -139,7 +140,7 @@ function awssetup() {
       echo -e "${BRed}Please provide a subnet, your entry didn't contain a valid input.${Color_Off}"
     fi
   done
-# Public IP address Selection
+  # Public IP address Selection
   echo -e -n "${Green}Do you want your instances having public IP addresses ? (required) \n>> ${Color_Off}"
   read public_ip
   while [[ "$public_ip" != "yes" && "$publicIP" != "no" ]]; do
@@ -235,11 +236,11 @@ function awssetup() {
   fi
   group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')" >/dev/null 2>&1
 
-  if [[ "$tkey" == "None"]]; then
+  if [[ "$tkey" == "None" ]]; then
     data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$group_id\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"public_ip\":\"$public_ip\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
   else
     data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$group_id\",\"tag_key\":\"$tkey\",\"tag_value\":\"$tvalue\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"public_ip\":\"$public_ip\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
-
+  fi
   echo -e "${BGreen}Profile settings below: ${Color_Off}"
   echo $data | jq
   echo -e "${BWhite}Press enter if you want to save these to a new profile, type 'r' if you wish to start again.${Color_Off}"
