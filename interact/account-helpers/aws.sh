@@ -113,7 +113,7 @@ function awssetup() {
     fi
     # If default VPC choosed, retrieve it
     if [[ "$vpc" == "" ]]; then
-      vpc_id=$(aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --query --region $region "Vpcs[0].VpcId" --output text)
+      vpc_id=$(aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --region $region --query "Vpcs[0].VpcId" --output text)
       if [[ "$vpc_id" == "None" ]]; then
         echo "${BRed}No default vpc available, please choose a vpc.${Color_Off}"
       else
