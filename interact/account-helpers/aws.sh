@@ -114,6 +114,7 @@ function awssetup() {
     # If default VPC choosed, retrieve it
     if [[ "$vpc" == "" ]]; then
       vpc_id=$(aws ec2 describe-vpcs --filters "Name=is-default,Values=true" --region $region --query "Vpcs[0].VpcId" --output text)
+      echo -e "${Blue}Selected default option 'default vpc'${Color_Off}"
       if [[ "$vpc_id" == "None" ]]; then
         echo "${BRed}No default vpc available, please choose a vpc.${Color_Off}"
       else
@@ -196,12 +197,14 @@ function awssetup() {
       if $valid_ip; then
         break
       fi
-    # Acceot all IPs if nothing entered
+    # Accept all IPs if nothing entered
     elif [[ "$security_source" == "" ]]; then
       security_source="0.0.0.0/0"
+      echo -e "${Blue}Selected default option '0.0.0.0/0'${Color_Off}"
       break
     # None case
     elif [[ "$security_source" == "None" ]]; then
+    echo -e "${Blue}Selected None option${Color_Off}"
       break
     else
       echo -e "${BRed}Please provide a correct answer, your entry didn't contain a valid input. Expected format: x.x.x.x/x \n${Color_Off}"
