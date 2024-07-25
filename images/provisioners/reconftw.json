@@ -53,8 +53,8 @@
         "sudo service sshd restart",
         "chmod +x /etc/update-motd.d/00-header",
 
-        "echo 'Installing Golang 1.20.4'",
-        "wget -q https://golang.org/dl/go1.20.4.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.20.4.linux-amd64.tar.gz && rm go1.20.4.linux-amd64.tar.gz",
+        "echo 'Installing Golang 1.22.2'",
+        "wget -q https://golang.org/dl/go1.22.2.linux-amd64.tar.gz && sudo tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz && rm go1.22.2.linux-amd64.tar.gz",
         "export GOPATH=/home/op/go",
 
         "echo 'Installing Docker'",
@@ -89,15 +89,11 @@
 
         "echo 'Installing Tools'",
 
-
         "echo 'Installing anew'",
         "/bin/su -l op -c '/usr/local/go/bin/go install github.com/tomnomnom/anew@latest'",
 
-
         "echo 'Installing Amass'",
         "/bin/su -l op -c '/usr/local/go/bin/go install github.com/owasp-amass/amass/v3/...@master'",
-
-
 
         "echo 'Installing axiom'",
         "/bin/su -l op -c 'git clone https://github.com/pry0cc/axiom.git /home/op/.axiom && cd /home/op/.axiom/interact && ./axiom-configure --shell zsh --unattended'",
@@ -127,7 +123,7 @@
         "/bin/su -l op -c 'GO111MODULE=on /usr/local/go/bin/go install github.com/lc/gau@latest'",
 
         "echo 'Installing gf'",
-        "/bin/su -l op -c 'GO111MODULE=off /usr/local/go/bin/go install github.com/tomnomnom/gf@latest'",
+        "/bin/su -l op -c '/usr/local/go/bin/go install github.com/tomnomnom/gf@latest'",
 
         "echo 'Installing Gf-Patterns'",
         "git clone https://github.com/1ndianl33t/Gf-Patterns /home/op/.gf",
@@ -137,7 +133,6 @@
 
         "echo 'Installing github-endpoints'",
         "/bin/su -l op -c '/usr/local/go/bin/go install github.com/gwen001/github-endpoints@latest'",
-
 
         "echo 'Installing google-chrome'",
         "wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && cd /tmp/ && sudo apt install -y /tmp/chrome.deb -qq && apt --fix-broken install -qq",
@@ -153,7 +148,6 @@
 
         "echo 'Installing interactsh-client'",
         "/bin/su -l op -c 'GO111MODULE=on /usr/local/go/bin/go install github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest'",
-
 
         "echo 'Installing katana'",
         "/bin/su -l op -c '/usr/local/go/bin/go install github.com/projectdiscovery/katana/cmd/katana@latest'",
