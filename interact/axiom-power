@@ -40,8 +40,7 @@ help=true
 off=false
 reboot=false
 force=false
-instance=false
-amount=false
+number_instance=false
 
 # Parse command line arguments 
 #
