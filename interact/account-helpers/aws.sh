@@ -34,6 +34,7 @@ case $BASEOS in
 *) ;;
 esac
 
+
 install_aws_cli() {
   echo -e "${Blue}Installing aws cli...${Color_Off}"
   if [[ $BASEOS == "Mac" ]]; then
@@ -48,7 +49,7 @@ install_aws_cli() {
 }
 
 is_installed() {
-  command -v "$1" >/dev/null 2>&1
+  command -v "$1" > /dev/null 2>&1
 }
 
 if is_installed "aws"; then
@@ -237,7 +238,8 @@ function awssetup() {
   echo -e "${BWhite}Press enter if you want to save these to a new profile, type 'r' if you wish to start again.${Color_Off}"
   read ans
 
-  if [[ "$ans" == "r" ]]; then
+if [[ "$ans" == "r" ]];
+then
     $0
     exit
   fi
@@ -250,7 +252,7 @@ function awssetup() {
     echo -e "${Blue}Named profile 'personal'${Color_Off}"
   fi
 
-  echo $data | jq >"$AXIOM_PATH/accounts/$title.json"
+echo $data | jq > "$AXIOM_PATH/accounts/$title.json"
   echo -e "${BGreen}Saved profile '$title' successfully!${Color_Off}"
   $AXIOM_PATH/interact/axiom-account $title
 
