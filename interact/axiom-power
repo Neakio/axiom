@@ -20,13 +20,15 @@ current=$(ls -lh ~/.axiom/axiom.json | awk '{ print $11 }' | tr '/' '\n' | grep 
 
 function usage() {
   cat << EOF
-  Usage: axiom-power on 'rez\*'  #turns on instances starting with 'rez'
-         axiom-power off '\*'    #turns off all instances
+  Usage: axiom-power on 'rez\*'         #turns on instances starting with 'rez'
+         axiom-power off '\*'           #turns off all instances
+         axiom-power on 'rez\*' -i 2    #turns on the 2 first instances of 'rez' fleet
   Examples:
-  on                             Power on instance by instance name
-  off                           Power off instance by instance name 
-  reboot                           Reboot instance by instance name
-  help | --help | -h                           Print this help menu
+  on                                      Power on instance by instance name
+  off                                    Power off instance by instance name 
+  reboot                                    Reboot instance by instance name
+  -i/--instances <integer> (optional)       The number of instances to power
+  help | --help | -h                                    Print this help menu
 EOF
 exit
 }
@@ -171,16 +173,25 @@ fi
 # Reboot Snapshots
 #
 if [[ "$reboot" == "true" ]]; then
-    instances=$(query_instances "$instances_name"|sort -u|tr ' ' '\n')
+    instances=$(query_instances "$instance"|sort -u|tr ' ' '\n')
   
   if [[ ${#instances} == 0 ]];then
         usage
         exit
     fi
-
+    if [[ "$number_instance" == "true" ]]; then
+        for i in $(seq -f "%02g" 1 "$amount"); 
+            do
+                instance_i="${instance//\\}"
+                instance_i="${instance_i//\*/$i}"
+                echo -e "${Yellow}Rebooting on instance: $instance_i${Color_Off}"
+                reboot $instance_i $force; 
+            done
+    else
     for i in $(echo $instances); 
         do 
             echo -e "${Yellow}Rebooting instance: $i${Color_Off}"
             reboot $i $force; 
         done
+    fi
 fi
