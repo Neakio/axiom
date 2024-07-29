@@ -229,9 +229,9 @@ function awssetup() {
   group_owner_id="$(echo "$group_rules" | jq -r '.SecurityGroupRules[].GroupOwnerId')" >/dev/null 2>&1
 
   if [[ "$tkey" == "None" ]]; then
-    data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$group_id\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"public_ip\":\"true\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
+    data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$group_id\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
   else
-    data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$group_id\",\"tag_key\":\"$tkey\",\"tag_value\":\"$tvalue\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"public_ip\":\"true\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
+    data="$(echo "{\"aws_access_key\":\"$ACCESS_KEY\",\"aws_secret_access_key\":\"$SECRET_KEY\",\"group_owner_id\":\"$group_owner_id\",\"security_group_id\":\"$group_id\",\"tag_key\":\"$tkey\",\"tag_value\":\"$tvalue\",\"region\":\"$region\",\"vpc_id\":\"$vpc_id\",\"subnet_id\":\"$subnet_id\",\"provider\":\"aws\",\"default_size\":\"$size\"}")"
   fi
   echo -e "${BGreen}Profile settings below: ${Color_Off}"
   echo $data | jq
