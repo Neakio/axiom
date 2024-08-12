@@ -133,81 +133,94 @@ def extract_and_save_content(html_content):
     end_string = "Done"
     soup = BeautifulSoup(html_content, 'html.parser')
 
+    # Debug: Check if the HTML content is correctly parsed
+    print("HTML content parsed successfully.")
+
     pre_tags = soup.find_all('pre')
 
+    # Debug: Check if any <pre> tags were found
     if not pre_tags:
         print("No <pre> tags found in the HTML content.")
-        return
+        return ""
+
+    print(f"Found {len(pre_tags)} <pre> tags in the HTML content.")
 
     url_set = set()
     all_div_content = ""
 
-
     for pre_tag in pre_tags:
         pre_content = str(pre_tag)
 
-        # Find the start indices where start_string occurs in the pre_content
+        # Debug: Check the content of each <pre> tag
+        print(f"Processing <pre> tag with content: {pre_content[:100]}...")
+
         unfiltered_start_indices = [i for i in range(len(pre_content)) if pre_content.startswith(start_string, i)]
 
-        # Filter the start indices where an HTTPS URL follows the start_string
+        # Debug: Check the start indices
+        print(f"Found {len(unfiltered_start_indices)} start indices: {unfiltered_start_indices}")
+
         start_indices = []
         for start_index in unfiltered_start_indices:
-            # Find the next occurrence of "https://" after the start index
             https_index = pre_content.find("https://", start_index)
             if https_index != -1:
-                # Check if there are any occurrences of "http://" between start_index and https_index
                 if "http://" not in pre_content[start_index:https_index]:
                     start_indices.append(start_index)
-        end_indices = [i for i in range(
-            len(pre_content)) if pre_content.startswith(end_string, i)]
-        pre_end_indices = [i for i in range(
-            len(pre_content)) if pre_content.startswith('</pre>', i)]
+
+        # Debug: Check filtered start indices
+        print(f"Filtered start indices: {start_indices}")
+
+        end_indices = [i for i in range(len(pre_content)) if pre_content.startswith(end_string, i)]
+        pre_end_indices = [i for i in range(len(pre_content)) if pre_content.startswith('</pre>', i)]
+
+        # Debug: Check the end indices
+        print(f"End indices: {end_indices}")
+        print(f"Pre-end indices: {pre_end_indices}")
 
         if not start_indices:
+            print("No valid start indices found, moving to next <pre> tag.")
             continue
 
-        i = (len(start_indices) - 1)
-        j = (len(end_indices) - 2)
+        i = len(start_indices) - 1
+        j = len(end_indices) - 2
         end_indices.pop()
         start_indices.insert(0, 1)
-        while len(start_indices) != (len(end_indices)+2):
+
+        while len(start_indices) != (len(end_indices) + 2):
             if start_indices[i] < end_indices[j] and start_indices[i-1] < end_indices[j]:
                 end_indices.pop(j)
                 j -= 1
             else:
                 i -= 1
                 j -= 1
-        start_indices.pop(0)
 
+        start_indices.pop(0)
         end_indices.append(pre_end_indices[0])
+
         for start_index in start_indices:
-            # Find the minimum end index that is greater than the current start index
-            end_index = min(filter(lambda x: x > start_index,
-                            end_indices + pre_end_indices), default=None)
+            end_index = min(filter(lambda x: x > start_index, end_indices + pre_end_indices), default=None)
             if end_index is None:
+                print(f"No end index found for start index {start_index}. Skipping this segment.")
                 break
 
-            extracted_content = pre_content[start_index:end_index +
-                                            len(end_string)]
+            extracted_content = pre_content[start_index:end_index + len(end_string)]
 
-            # Find the URL in the first line using regex
-            url_match = re.search(
-                r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', extracted_content)
+            # Debug: Check the extracted content
+            print(f"Extracted content: {extracted_content[:100]}...")
+
+            url_match = re.search(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', extracted_content)
             if url_match:
                 url = url_match.group()
             else:
                 url = ""
 
             if url in url_set:
-                # Append to the existing div
+                print(f"URL {url} already processed. Appending content.")
                 div = soup.find('div', {'id': url})
                 if div:
-                    div.append(BeautifulSoup(
-                        f'<pre>{extracted_content}</pre>', 'html.parser'))
-                    div.append(BeautifulSoup(
-                        '<span class="done-span">Done</span>', 'html.parser'))
+                    div.append(BeautifulSoup(f'<pre>{extracted_content}</pre>', 'html.parser'))
+                    div.append(BeautifulSoup('<span class="done-span">Done</span>', 'html.parser'))
             else:
-                # Create a new div
+                print(f"New URL found: {url}. Creating new div.")
                 all_div_content += f'''
                 <div class="panel panel-default"> 
                     <div class="panel-heading clickable">
@@ -219,10 +232,15 @@ def extract_and_save_content(html_content):
                     </div>
                 </div>
                 '''
-                # Add the URL to the set
                 url_set.add(url)
-    return all_div_content
 
+    # Debug: Final content to be returned
+    if all_div_content:
+        print("Final content assembled successfully.")
+    else:
+        print("No content was assembled.")
+
+    return all_div_content or ""
 
 def main():
     if len(sys.argv) != 4:

@@ -115,7 +115,7 @@ OUTPUT:
    -o string[]          output as default (the first ext mentioned in the module)
    -oD/-oA string[]     output as directory (must also be supplied in the module using "ext":"dir" or "ext":"")
    -oG string[]         output as greppable, merge and sort unique (must also be supplied in the module using "ext":"oG")
-   -oX string[]         output as XML/HTML (supported for nmap and masscan)(must also be supplied in the module using "ext":"xml")
+   -oX string[]         output as XML/HTML (supported for nmap only)(must also be supplied in the module using "ext":"xml")
    -oH string[]         output as HTML (supported for testssl only)(must also be supplied in the module using "ext":"html")
    -oJ string[]         output as JSON (supported for Gau only)(must also be supplied in the module using "ext":"json")
    -csv string []       output as csv, extract csv header, merge and sort unique (must also be supplied in the module using "ext":"csv")
@@ -320,6 +320,17 @@ merge_output() {
      fi
     fi
     if [[ "$ext" == "txt" ]]; then
+    if [[ "$module" == "testssl" ]]; then
+        echo "mode set to txt.. merging."
+        find $tmp/output/ -type f -exec cat {} \; > $tmp/merge
+        output_lines=$(wc -l $tmp/merge | tr -s ' ' | cut -d ' ' -f 1)
+        if [[ "$anew" == "true" ]]; then
+            cat "$tmp/merge" | anew "$outfile"
+        else
+            echo "cat $tmp/merge"
+            mv "$tmp/merge" "$outfile"
+        fi
+    else
         echo "mode set to txt.. sorting unique."
         find $tmp/output/ -type f -exec cat {} \; | sort -u > $tmp/merge
         output_lines=$(wc -l $tmp/merge | tr -s ' ' | cut -d ' ' -f 1)
@@ -329,18 +340,13 @@ merge_output() {
             echo "cat $tmp/merge"
             mv "$tmp/merge" "$outfile"
         fi
+    fi
     elif [[ "$ext" == "json" ]]; then
-        if [[ "$module" == "testssl" ]]; then
-           echo "mode set to json.. merging testssl..."
-           find $tmp/output/ -type f -exec jq -s . {} \; > $tmp/merge
-           mv "$tmp/merge" "$outfile"
-        else
-           echo "mode set to txt.. sorting unique."
-           find $tmp/output/ -type f -exec cat {} \; | sort -u > $tmp/merge
-           output_lines=$(wc -l $tmp/merge | tr -s ' ' | cut -d ' ' -f 1)
-           python3 "$AXIOM_PATH/interact/gau_json.py" -i "$tmp/merge" -o "$tmp/merge.json" >/dev/null 2>&1
-           mv "$tmp/merge.json" "$outfile"
-        fi
+        echo "mode set to json.. sorting unique."
+        find $tmp/output/ -type f -exec cat {} \; | sort -u > $tmp/merge
+        output_lines=$(wc -l $tmp/merge | tr -s ' ' | cut -d ' ' -f 1)
+        python3 "$AXIOM_PATH/interact/gau_json.py" -i "$tmp/merge" -o "$tmp/merge.json" >/dev/null 2>&1
+        mv "$tmp/merge.json" "$outfile"
     elif [[ "$ext" == "xml" ]]; then
         echo "Mode set to XML.. Merging Nmap XML output..."
         "$AXIOM_PATH/interact/merge-xml.py" -i "$tmp/output" -o "$tmp/merge.xml" >> /dev/null
@@ -361,7 +367,7 @@ merge_output() {
         output_lines=$(ls $outfile | wc -l)
     elif [[ "$ext" == "html" ]]; then
         echo "Mode set to HTML.. Merging TestSSL html output..."
-        python3 "$AXIOM_PATH/interact/merge-testssl.py" "$tmp/output/*.html" "$tmp/merge.html" >/dev/null 2>&1
+        python3 "$AXIOM_PATH/interact/merge-testssl.py" "$tmp/output/" "$tmp/merge.html" "$input" >/dev/null 2>&1
         mv "$tmp/merge.html" "$outfile.html"
     elif [[ "$ext" == "" ]] || [[ "$ext" == "dir" ]];  then
         echo "Mode set to directory... Merging directories..."
