@@ -4,6 +4,7 @@
 # Header
 #
 AXIOM_PATH="$HOME/.axiom"
+ANEW_PATH="$HOME/go/bin"
 source "$AXIOM_PATH/interact/includes/vars.sh"
 source "$AXIOM_PATH/interact/includes/functions.sh"
 source "$AXIOM_PATH/interact/includes/system-notification.sh"
@@ -325,7 +326,7 @@ merge_output() {
         find $tmp/output/ -type f -exec cat {} \; > $tmp/merge
         output_lines=$(wc -l $tmp/merge | tr -s ' ' | cut -d ' ' -f 1)
         if [[ "$anew" == "true" ]]; then
-            cat "$tmp/merge" | anew "$outfile"
+            cat "$tmp/merge" | $ANEW_PATH/anew "$outfile"
         else
             echo "cat $tmp/merge"
             mv "$tmp/merge" "$outfile"
@@ -335,7 +336,7 @@ merge_output() {
         find $tmp/output/ -type f -exec cat {} \; | sort -u > $tmp/merge
         output_lines=$(wc -l $tmp/merge | tr -s ' ' | cut -d ' ' -f 1)
         if [[ "$anew" == "true" ]]; then
-            cat "$tmp/merge" | anew "$outfile"
+            cat "$tmp/merge" | $ANEW_PATH/anew "$outfile"
         else
             echo "cat $tmp/merge"
             mv "$tmp/merge" "$outfile"
@@ -1130,7 +1131,7 @@ function downloader () {
 while true; do
 sleep 30
 $interlace_cmd_nobar -c "axiom-scp _target_:$scan_dir/_target_ $tmp/status/inprogress/_target_ --cache -F=$sshconfig >/dev/null 2>&1"
-ls $tmp/status/inprogress/ | anew -q $tmp/status/completed/hosts 
+ls $tmp/status/inprogress/ | $ANEW_PATH/anew -q $tmp/status/completed/hosts 
 cat $tmp/status/completed/hosts | sort -u | wc -l | tee $tmp/status/downloader_instances  >/dev/null 2>&1
 cat $tmp/status/completed/hosts | sort -u | tee $tmp/status/downloader_hosts  >/dev/null 2>&1
 
